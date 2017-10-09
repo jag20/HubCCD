@@ -24,7 +24,7 @@ def RHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
     alpha = 1.0
     beta  = 1.0
 
-  nvirt = nbas - nocc
+  nvirt = nbas-nocc
   c2 = (1.0e0/2.0e0)*(3.0e0/5.0e0)
   
   #Linear terms
@@ -36,14 +36,14 @@ def RHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
   else:
   #Get Quadratic Terms  
   #Ladder
-    L = Ladder(Eri, T, nocc,nvirt)
+    L = Ladder(Eri, T, nocc)
   
     #Rings
-    R = Rings(Eri, T, nocc, nvirt)
+    R = Rings(Eri, T, nocc)
   
     #Mosaics and Mosaic p-h conjugates
-    M = Mosaics(Eri, T, nocc, nvirt)
-    Mph = Mosaicsph(Eri, T, nocc, nvirt)
+    M = Mosaics(Eri, T, nocc)
+    Mph = Mosaicsph(Eri, T, nocc)
 
     G += 0.5e0*(1.0e0 + alpha)*M + alpha*L + beta*(Mph + R)
 
@@ -73,18 +73,16 @@ def Lin(Eri,T,nocc):
   G -= np.einsum('kjac,ickb->ijab',T,Eri[:nocc,nocc:,:nocc,nocc:])
   return G
 
-def Ladder(Eri, T, nocc,nvirt):
-  L = np.zeros((nocc,nocc,nvirt,nvirt))
+def Ladder(Eri, T, nocc):
   Jcdab = np.einsum('klab,cdkl->cdab',T, Eri[nocc:,nocc:,:nocc,:nocc])
-  L += np.einsum('ijcd,cdab->ijab',T, Jcdab)
+  L = np.einsum('ijcd,cdab->ijab',T, Jcdab)
   return L
   
 
-def Rings(Eri, T, nocc, nvirt):
-  R = np.zeros((nocc,nocc,nvirt,nvirt))
+def Rings(Eri, T, nocc):
   vbar = (2*Eri - np.swapaxes(Eri,0,1))[nocc:,nocc:,:nocc,:nocc]
   Jdblj = np.einsum('kjcb,cdkl->dblj',T, vbar)
-  R += np.einsum('ilad,dblj->ijab',(2*T - np.swapaxes(T,2,3)),Jdblj)
+  R = np.einsum('ilad,dblj->ijab',(2*T - np.swapaxes(T,2,3)),Jdblj)
   Jdbjl = np.einsum('jkcb,cdkl->dbjl',T, vbar)
   R -= np.einsum('ilad,dbjl->ijab',T,Jdbjl)
   Jdbjl = np.einsum('jkcb,cdkl->dbjl',T, Eri[nocc:,nocc:,:nocc,:nocc])
@@ -94,21 +92,19 @@ def Rings(Eri, T, nocc, nvirt):
   R += np.einsum('ildb,adlj->ijab',T,Jadlj)
   return R
 
-def Mosaics(Eri, T, nocc, nvirt):
+def Mosaics(Eri, T, nocc):
   vbar = (2*Eri - np.swapaxes(Eri,0,1))[nocc:,nocc:,:nocc,:nocc]
-  M = np.zeros((nocc,nocc,nvirt,nvirt))
   Jki = np.einsum('cdkl,ilcd->ki', -vbar, T)
-  M += np.einsum('ki,kjab->ijab',Jki, T)
+  M = np.einsum('ki,kjab->ijab',Jki, T)
   M += np.einsum('kj,ikab->ijab',Jki, T)
   return M
 
-def Mosaicsph(Eri, T, nocc, nvirt):
+def Mosaicsph(Eri, T, nocc):
   vbar = (2*Eri - np.swapaxes(Eri,0,1))[nocc:,nocc:,:nocc,:nocc]
-  Mph = np.zeros((nocc,nocc,nvirt,nvirt))
   #vbar = -1*(2*Eri - np.swapaxes(Eri,0,1))[nocc:,nocc:,:nocc,:nocc]
   #Jca = np.einsum('cdkl,klad->ca', vbar, T)
   Jca = np.einsum('cdkl,klad->ca', -vbar, T)
-  Mph += np.einsum('ca,ijcb->ijab',Jca, T)
+  Mph = np.einsum('ca,ijcb->ijab',Jca, T)
   Mph += np.einsum('cb,ijac->ijab',Jca, T)
   return Mph
 
@@ -217,9 +213,6 @@ def soMosaicsph(Eri, T, nocc):
     Mph  = -1.0/2.0*np.einsum('ijcb,ac->ijab',T,ac)
     Mph += -1.0/2.0*np.einsum('ijac,cb->ijab',T,ac)
     return Mph
-
-
-
 
 
 def GCCDEn(Eri,T,nocc):
