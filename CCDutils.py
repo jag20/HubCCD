@@ -130,12 +130,12 @@ def Attenuate(Eri,T, nocc, nvirt,attnum=1,c2=3.0/10.0):
     K = -1.0e0/3.0e0*(Uc + 2.0e0*np.swapaxes(Uc,0,1))
 
     #Ladder
-    L = Ladder(Eri, K, nocc, nvirt)
+    L = Ladder(Eri, K, nocc)
     #Rings
-    R = Rings(Eri, K, nocc, nvirt)
+    R = Rings(Eri, K, nocc)
     #Mosaics and Mosaic p-h conjugates
-    M = Mosaics(Eri, K, nocc, nvirt)
-    Mph = Mosaicsph(Eri, K, nocc, nvirt)
+    M = Mosaics(Eri, K, nocc)
+    Mph = Mosaicsph(Eri, K, nocc)
 
     #"unlinked" piece
     vbar = (2*Eri - np.swapaxes(Eri,0,1))[nocc:,nocc:,:nocc,:nocc]
