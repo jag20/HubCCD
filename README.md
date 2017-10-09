@@ -17,3 +17,9 @@ with interesting physics.
 Usage of particular functions is defined in the code. A sample excution script 'run.py' 
 demonstrates how to run AttCCD on the 10-site 1D Hubbard Hamiltonian at half-filling with
 periodic boundary conditions.
+
+#Contributors
+John Gomez, Rice University
+
+#License
+MIT License.
