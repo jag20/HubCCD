@@ -41,27 +41,30 @@ class hub(ham):
      for iy in range(self.nsitesy):
        i = ix + (iy)*self.nsitesx
        #Set index j of site to interact with
+
+       #Interact with neighbors in the x direction
        if (ix != (self.nsitesx -1)):
-         #Interact with neighbors in the x-direction
+         #Interact with neighbor to the right
          j = (ix+1) + (iy)*self.nsitesx
          self.OneH[i,j] = self.hubT
          self.OneH[j,i] = self.hubT
        else:
          #interact with the left-most site if we're at right edge of the lattice and have PBC
          if self.PeriodicX:
-           j = 0
+           j = (iy)*self.nsitesx
            self.OneH[i,j] = self.hubT
            self.OneH[j,i] = self.hubT
 
-       #Interact with neighbors in the y-direction
+       #Interact with neighbors in the y direction
        if (iy != (self.nsitesy -1)):
+         #interact with neighbor above
          j = ix + (iy+1)*self.nsitesx
          self.OneH[i,j] = self.hubT
          self.OneH[j,i] = self.hubT
        else:
          #interact with the bottom site if we have PBC
          if self.PeriodicY:
-           j = 0
+           j = ix
            self.OneH[i,j] = self.hubT
            self.OneH[j,i] = self.hubT
 

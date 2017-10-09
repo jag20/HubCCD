@@ -42,10 +42,8 @@ def UHF(ham,denfile):
   #Make nsitesy copies of a nsitesx-dimensional 1-D lattice.
   else:
       nmax = int(ham.nocc/2) + 1
-      print(nmax)
       xlat = np.zeros(ham.nsitesx)
       for n in range(0,nmax,2):
-          print(n)
           xlat[n] = 1
       diag_a = []
       diag_b = []
@@ -59,30 +57,6 @@ def UHF(ham,denfile):
       P_a = np.diag(diag_a)
       P_b = np.diag(diag_b)
 
-#      n_max = self.nocc/2
-#
-#      for ix in range(self.nsitesx):
-#          for iy in range(self.nsitesy):
-#               i = ix + (iy)*self.nsitesx
-#   Ko = 0
-#   Kv = 0
-#   for I in range(ham.nsitesx):
-#     for J in range(ham.nsitesy):
-#       if((I+J)%2==1):
-#         C_a[int(J+(I)*ham.nsitesy),int(Ko)] = 1.0e0
-#         C_b[int(J+(I)*ham.nsitesy),int(Ko+ham.nbas/2)] = 1.0e0
-#         Ko += 1
-#       else:
-#         C_a[int(J+(I)*ham.nsitesy),int(Kv+ham.nbas/2)] = 1.0e0
-#         C_b[int(J+(I)*ham.nsitesy),int(Kv)] = 1.0e0
-#         Kv += 1
-#  
-#   P_a = buildP(C_a,ham.nocc)
-#   P_b = buildP(C_b,ham.nocc)
-  print(P_a)
-  print(P_b)
- 
-  
   F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
   #Set some values and do the UHF iteration
   error = 1.0

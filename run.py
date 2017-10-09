@@ -9,12 +9,13 @@ import CCD
 flnm = "out"
 with open(flnm, "w") as f:
    f.write("U" + "     " + "Ecorr" + "            "+ "Escf" + "\n")
-   for U in np.arange(1.,10.1,.2):
+#   for U in np.arange(1.,10.1,.2):
+   for U in np.arange(10,1.0,-.2):
     print("U = ", U)
     #Build hamiltonian and do RHF
 #    hub = ham.hub(nsitesx=6,nsitesy=1,U=U,fill=0.5,PeriodicX=False)
-    hub = ham.hub(nsitesx=4,nsitesy=2,U=U,fill=0.5,PeriodicX=False)
-    hub.get_ints(wfn_type="uhf")
+    hub = ham.hub(nsitesx=4,nsitesy=2,U=U,fill=0.5,PeriodicX=True)
+    hub.get_ints(wfn_type="rhf",denfile="none")
 #    CCD.ccd(hub,ampfile="amps",variant="att")
 #    f.write(str(U) + "   " + str(hub.eccd) + "  "+ str(hub.escf) + "\n")
     f.write(str(U) + "   " + "  "+ str(hub.escf) + "\n")
