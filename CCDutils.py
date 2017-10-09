@@ -2,6 +2,8 @@ import numpy as np
 #This module contains the functions necessary for doing CCD in the RHF and spin-orbital basis
 #as well as some CCD-based theories.
 
+
+##RHF-based utilities
 def RHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
  #This function gets the right hand side of the rhf-based CCD equations. (The G in HT=G)
  #Spin-summation of the amplitude equations (only one set of t_ij^ab amplitudes) is from Scuseria, et al., JCP 86(5), 2881 (1987)
@@ -23,7 +25,7 @@ def RHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
     beta  = 1.0
 
   nvirt = nbas - nocc
-  c2 = (1.0e0/2.0e0)*(3.0e0/5.0e0)#**gamma
+  c2 = (1.0e0/2.0e0)*(3.0e0/5.0e0)
   
   #Linear terms
   G = Lin(Eri,T,nocc)
@@ -34,7 +36,7 @@ def RHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
   else:
   #Get Quadratic Terms  
   #Ladder
-    L = Ladder(Eri, T, nocc, nvirt)
+    L = Ladder(Eri, T, nocc,nvirt)
   
     #Rings
     R = Rings(Eri, T, nocc, nvirt)
@@ -71,7 +73,7 @@ def Lin(Eri,T,nocc):
   G -= np.einsum('kjac,ickb->ijab',T,Eri[:nocc,nocc:,:nocc,nocc:])
   return G
 
-def Ladder(Eri, T, nocc, nvirt):
+def Ladder(Eri, T, nocc,nvirt):
   L = np.zeros((nocc,nocc,nvirt,nvirt))
   Jcdab = np.einsum('klab,cdkl->cdab',T, Eri[nocc:,nocc:,:nocc,:nocc])
   L += np.einsum('ijcd,cdab->ijab',T, Jcdab)
@@ -111,8 +113,7 @@ def Mosaicsph(Eri, T, nocc, nvirt):
   return Mph
 
 def Attenuate(Eri,T, nocc, nvirt,attnum=1,c2=3.0/10.0):
-  #Attenuated the spic ollective mode 
-  G = np.zeros(np.shape(T))
+  #Attenuated the spic collective mode 
   mdim = nocc*nvirt
   G = np.zeros(np.shape(T))
   K = np.swapaxes(T - 2.0e0*np.swapaxes(T,2,3),1,2)
@@ -147,8 +148,87 @@ def Attenuate(Eri,T, nocc, nvirt,attnum=1,c2=3.0/10.0):
   return G
 
       
-  
+##GHF-based utilities
+def GHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
+ #This function gets the right hand side of the ghf-based CCD equations. (The G in HT=G)
+ #Terms quadratic in T are divided up into Ladder, Ring and Mosaic diagrams. See Bulik, Henderson and Scuseria, JCTC 11(7), 3171 (2015). Note the type on the sign of the mosaic terms in the reference.
+ #Diagrams have coefficients alpha and beta from parametrized CCD. See Nooijen, JCP 133, 184109 (2010)
 
+  variant = variant.lower()
+
+  if (variant == "acpq"):
+    alpha = 1.0
+    beta = 0.0
+  else:
+    alpha = 1.0
+    beta  = 1.0
+
+  #Linear terms
+  G = soLin(Eri,T,nocc)
+  if (variant == "lin"):
+     #Linearized Coupled Cluster
+    return G
+
+  else:
+  #Get Quadratic Terms  
+  #Ladder
+    L = soLadder(Eri, T, nocc)
+#  
+#    #Rings
+    R = soRings(Eri, T, nocc)
+#  
+#    #Mosaics and Mosaic p-h conjugates
+    M   = soMosaics(Eri, T, nocc)
+    Mph = soMosaicsph(Eri, T, nocc)
+#
+    G += 0.5e0*(1.0e0 + alpha)*M + alpha*L + beta*(Mph + R)
+
+  return G
+    
+def soLin(Eri,T,nocc):
+  G = np.copy(Eri[:nocc,:nocc,nocc:,nocc:])
+  G += 1.0/2.0*np.einsum('klab,ijkl->ijab',T,Eri[:nocc,:nocc,:nocc,:nocc])
+  G += 1.0/2.0*np.einsum('ijcd,cdab->ijab',T,Eri[nocc:,nocc:,nocc:,nocc:])
+  G += np.einsum('ikac,cjkb->ijab',T,Eri[nocc:,:nocc,:nocc,nocc:])
+  G += np.einsum('kjcb,cika->ijab',T,Eri[nocc:,:nocc,:nocc,nocc:])
+  G -= np.einsum('ikbc,cjka->ijab',T,Eri[nocc:,:nocc,:nocc,nocc:])
+  G -= np.einsum('kjca,cikb->ijab',T,Eri[nocc:,:nocc,:nocc,nocc:])
+  return G
+
+def soLadder(Eri, T, nocc):
+    cdab = 1.0/4.0*np.einsum('klab,cdkl->cdab',T,Eri[nocc:,nocc:,:nocc,:nocc])
+    return np.einsum('ijcd,cdab->ijab',T,cdab)
+
+def soRings(Eri, T, nocc):
+    jkbc = np.einsum('jlbd,cdkl->jkbc',T,Eri[nocc:,nocc:,:nocc,:nocc])
+    R = np.einsum('ikac,jkbc->ijab',T,jkbc) 
+#    tau = np.einsum('jlad,cdkl->jkac',T,Eri[nocc:,nocc:,:nocc,:nocc])
+    R -= np.einsum('ikbc,jkac->ijab',T,jkbc) 
+    return R
+
+def soMosaics(Eri, T, nocc):
+    ik = np.einsum('ilcd,cdkl->ik',T,Eri[nocc:,nocc:,:nocc,:nocc])
+    M  = -1.0/2.0*np.einsum('kjab,ik->ijab',T,ik)
+    M += -1.0/2.0*np.einsum('ikab,kj->ijab',T,ik)
+    return M
+
+def soMosaicsph(Eri, T, nocc):
+    ac = np.einsum('klad,cdkl->ac',T,Eri[nocc:,nocc:,:nocc,:nocc])
+    Mph  = -1.0/2.0*np.einsum('ijcb,ac->ijab',T,ac)
+    Mph += -1.0/2.0*np.einsum('ijac,cb->ijab',T,ac)
+    return Mph
+
+
+
+
+
+def GCCDEn(Eri,T,nocc):
+  #Spin-summed RHF-basis CCD energy
+  eccd = 1.0/4.0*np.einsum('ijab,abij',T,Eri[nocc:,nocc:,:nocc,:nocc])
+  return eccd
+
+
+##DIIS extrapolation and equation-solving routines for both RHF and GHF CCD.
 def solveccd(F,G,T,nocc,nvirt,x=4.0):
   Tnew = np.zeros(np.shape(T))
   for i in range(nocc):
@@ -221,4 +301,5 @@ def get_Err(F,G,T,nocc,nvirt):
           Err_vec[i,j,a,b] = G[i,j,a,b]-(F[i,i] + F[j,j] - F[aa,aa] - F[bb,bb])*T[i,j,a,b]
   error = np.amax(np.absolute(Err_vec))
   return error, Err_vec
+
 

@@ -5,10 +5,8 @@ from CCDutils import *
 def ccd(ham,ampfile="none",variant="ccd"):
   import pickle
   import os
-#  Gs  = {"uhf":GHFCCD, "rhf": RHFCCD}
-#  ens = {"uhf":GCCDEn, "rhf": RCCDEn}
-  Gs  = {"rhf": RHFCCD}
-  ens = {"rhf": RCCDEn}
+  Gs  = {"uhf":GHFCCD, "rhf": RHFCCD}
+  ens = {"uhf":GCCDEn, "rhf": RCCDEn}
 
 
   getG   = Gs[ham.wfn_type]
