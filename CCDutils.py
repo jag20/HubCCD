@@ -109,7 +109,7 @@ def Mosaicsph(Eri, T, nocc):
   return Mph
 
 def Attenuate(Eri,T, nocc, nvirt,attnum=1,c2=3.0/10.0):
-  #Attenuated the spic collective mode 
+  #Attenuated the spin collective mode 
   mdim = nocc*nvirt
   G = np.zeros(np.shape(T))
   K = np.swapaxes(T - 2.0e0*np.swapaxes(T,2,3),1,2)
@@ -149,8 +149,13 @@ def GHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
  #This function gets the right hand side of the ghf-based CCD equations. (The G in HT=G)
  #Terms quadratic in T are divided up into Ladder, Ring and Mosaic diagrams. See Bulik, Henderson and Scuseria, JCTC 11(7), 3171 (2015). Note the type on the sign of the mosaic terms in the reference.
  #Diagrams have coefficients alpha and beta from parametrized CCD. See Nooijen, JCP 133, 184109 (2010)
-
+ # CCD variants
+ # variant = "ccd"   (the default, standard CCD)
+ # 	       = "patt"   (pair-attenuated CCD) Gomez, Henderson and Scuseria, Mol. Phys. onlin 23 Mar 2017.
+ #   	   = "lin"   (linearized CCD, i.e. no quadratic terms)
+ #         = "acpq"  (ACPQ)
   variant = variant.lower()
+  nvirt = nbas-nocc
 
   if (variant == "acpq"):
     alpha = 1.0
@@ -178,6 +183,10 @@ def GHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
     Mph = soMosaicsph(Eri, T, nocc)
 #
     G += 0.5e0*(1.0e0 + alpha)*M + alpha*L + beta*(Mph + R)
+
+  if (variant == "patt"):
+#    print("attenuating")
+    G += pAttenuate(Eri,T, nocc, nvirt)
 
   return G
     
@@ -214,6 +223,34 @@ def soMosaicsph(Eri, T, nocc):
     Mph += -1.0/2.0*np.einsum('ijac,cb->ijab',T,ac)
     return Mph
 
+def pAttenuate(Eri,T, nocc, nvirt,attnum=1,c2=1.0/4.0):
+  #Attenuated the pairing collective mode 
+  mdim = nocc*nocc
+  ndim = nvirt*nvirt
+  Uc  = np.zeros((mdim,ndim))
+  #get pairing collective mode
+  Umat = T.reshape(mdim,ndim)
+  M, s, V = np.linalg.svd(Umat, full_matrices = True)
+  attfact = 2.0e0*c2-1.0e0
+  for i in range(attnum):
+    smat = np.zeros((mdim,ndim))
+    smat[i,i] = s[i]
+    Uc = np.dot(M,np.dot(smat,V))
+    K = np.reshape(Uc,(nocc,nocc,nvirt,nvirt))
+
+    #Ladder
+    L = soLadder(Eri, K, nocc)
+    #Rings
+    R = soRings(Eri, K, nocc)
+    #Mosaics and Mosaic p-h conjugates
+    M = soMosaics(Eri, K, nocc)
+    Mph = soMosaicsph(Eri, K, nocc)
+
+    #"unlinked" piece
+    eccd = 1.0/4.0*np.einsum('ijab,abij',K,Eri[nocc:,nocc:,:nocc,:nocc])
+    G  = attfact*(M + L + Mph + R + K*eccd)
+  return G
+
 
 def GCCDEn(Eri,T,nocc):
   #Spin-summed RHF-basis CCD energy
@@ -237,8 +274,8 @@ def solveccd(F,G,T,nocc,nvirt,x=4.0):
 def diis_setup(nocc,nvirt):
   #use direct inversion of the iterative subspace (Pulay Chem Phys Lett 73(390), 1980) to extrapolate CC amplitudes.
   #This function sets up the various arrays we need for the extrapolation.
-  diis_start = 12
-  diis_dim = 6
+  diis_start = 25
+  diis_dim = 8
   Errors  = np.zeros([diis_dim,nocc,nocc,nvirt,nvirt])
   Ts      = np.zeros([diis_dim,nocc,nocc,nvirt,nvirt])
   Err_vec = np.zeros([nocc,nocc,nvirt,nvirt])
