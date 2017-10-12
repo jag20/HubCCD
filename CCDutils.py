@@ -15,9 +15,10 @@ def RHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
  # 	   = "att"   (spin-attenuated CCD)
  # 	   = "lin"   (linearized CCD, i.e. no quadratic terms)
  #         = "acpq"  (ACPQ)
+ #         = "acpd45"  (ACP-D45 from Paldus, etc.)
   variant = variant.lower()
 
-  if (variant == "acpq"):
+  if (variant == "acpq") or (variant == "acpd45"):
     alpha = 1.0
     beta = 0.0
   else:

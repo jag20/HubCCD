@@ -16,7 +16,7 @@ with open(flnm, "w") as f:
     hub = ham.hub(nsitesx=10,nsitesy=1,U=U,fill=0.5,PeriodicX=True)
     hub.get_ints(wfn_type="rhf")
     #Do attenuated coupled cluster
-    CCD.ccd(hub,ampfile="amps",variant="att")
+    CCD.ccd(hub,ampfile="amps",variant="acpd45")
     f.write(str(U) + "   " + str(hub.eccd) + "  "+ str(hub.escf) + "\n")
  
 
