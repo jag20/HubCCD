@@ -50,6 +50,12 @@ def RHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
     if (variant == "att"):
     #Do suhf attenuation of spin collective mode (attCCD) Gomez, Henderson and Scuseria, Mol. Phys. onlin 23 Mar 2017.
       G += Attenuate(Eri,T, nocc, nvirt,attnum=1,c2=3.0/10.0)
+
+
+    if (variant == "acpq"):
+    # don't forget 9* the triplet ladder for ACPQ
+      G += 5*L + 4*np.swapaxes(L,2,3)
+
     return G
     
 
