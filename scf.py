@@ -41,7 +41,7 @@ def UHF(ham,denfile):
   #Break S^2 symmetry using an antiferromagnetic guess.
   #Make nsitesy copies of a nsitesx-dimensional 1-D lattice.
   else:
-      nmax = int(ham.nocc/2) + 1
+      nmax = int(ham.nocc/ham.nsitesy) + 1
       xlat = np.zeros(ham.nsitesx)
       for n in range(0,nmax,2):
           xlat[n] = 1
