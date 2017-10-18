@@ -1,6 +1,7 @@
 import ham 
 import numpy as np
 import CCD
+import CCSD
 
 #This script demonstrates the use of the CCD and CCDutils modules
 #to run attenuated Coupled Cluster(Gomez, Henderson and Scuseria, Mol. Phys. online 23 Mar 2017)
@@ -10,13 +11,15 @@ flnm = "./Output"
 print("Writing results to ", flnm)
 with open(flnm, "w") as f:
    f.write("U" + "     " + "Ecorr" + "            "+ "Escf" + "\n")
-   for U in np.arange(1.,10.1,.2):
+   for U in np.arange(1.,1.1,.2):
     print("U = ", U)
     #Build hamiltonian and do RHF
     hub = ham.hub(nsitesx=10,nsitesy=1,U=U,fill=0.5,PeriodicX=True)
-    hub.get_ints(wfn_type="rhf")
+    hub.get_ints(wfn_type="uhf")
     #Do attenuated coupled cluster
     CCD.ccd(hub,ampfile="amps",variant="acpq")
+	#Do CCSD
+    CCSD.ccsd(hub,ampfile="none")
     f.write(str(U) + "   " + str(hub.eccd) + "  "+ str(hub.escf) + "\n")
  
 

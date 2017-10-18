@@ -260,7 +260,7 @@ def pAttenuate(Eri,T, nocc, nvirt,attnum=1,c2=1.0/4.0):
 
 
 def GCCDEn(Eri,T,nocc):
-  #Spin-summed RHF-basis CCD energy
+  #Spin-orbital T2 contribution to the CC energy
   eccd = 1.0/4.0*np.einsum('ijab,abij',T,Eri[nocc:,nocc:,:nocc,:nocc])
   return eccd
 
