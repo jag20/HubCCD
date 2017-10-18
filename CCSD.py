@@ -20,9 +20,6 @@ def ccsd(ham,ampfile="none"):
 		ham.nocc = 2*ham.nocc
 		ham.nvirt = 2*ham.nvirt
 		
-	error = 1.0
-	tol = 1.0e-08
-	eold = 1.0
 #read amplitudes from file if present to improve convergence
 	if ((ampfile != 'none') and(os.path.isfile(ampfile))):
 		with open(ampfile, 'rb') as f:
@@ -38,24 +35,38 @@ def ccsd(ham,ampfile="none"):
 		T1 = np.zeros([ham.nocc,ham.nvirt])
 		eold = 0.0e0
 
+	#Set up for CCD iteration and DIIS. interpolate doubles only for now
+	diis_start, diis_dim, Errors, T2s, Err_vec = CCDutils.diis_setup(ham.nocc,ham.nvirt)
+	niter = 0
+	tol = 1.0e-6
+	error = tol*50
+
 	while (error > tol):
+		niter += 1
+#		T2, Errors, T2s = CCDutils.diis(diis_start,diis_dim,niter,Errors,T2s,T2,Err_vec)
+#		if (niter > 1):
+#			error, Err_vec = CCDutils.get_Err(ham.F,G2,T2,ham.nocc,ham.nvirt)
 		#build RHS
-#		G1 = CCSDsingles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
+		G1 = CCSDsingles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
 		G2 = CCSDdoubles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
 
 		#solve H
-#		T1 = solveccs(ham.F,G1,T1,ham.nocc,ham.nvirt)
-		T2 = CCDutils.solveccd(ham.F,G2,T2,ham.nocc,ham.nvirt)
+		T1 = solveccs(ham.F,G1,T1,ham.nocc,ham.nvirt,x=1.0)
+		T2 = CCDutils.solveccd(ham.F,G2,T2,ham.nocc,ham.nvirt,x=1.0)
 
 		#get energies
-#		E1 = GCCSEn(ham.F,ham.Eri,T1,ham.nocc)
-		E1 = 0.0e0
+		E1 = GCCSEn(ham.F,ham.Eri,T1,ham.nocc)
 		E2 = CCDutils.GCCDEn(ham.Eri,T2,ham.nocc)
 		ecorr = E1 + E2
 		error = np.abs(ecorr-eold)
 		print("Energy = ", ecorr, "error = ", error)
 		eold = ecorr 
 
+
+	if ((ampfile != 'none')):
+		with open(ampfile, 'wb') as f:
+			T2 = pickle.dump(f)
+			T1 = pickle.dump(f)
 
 	ham.ecorr = ecorr
 	

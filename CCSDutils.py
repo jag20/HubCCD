@@ -5,9 +5,65 @@ import CCDutils
 
 ##Spin-orbital-based utilities
 def CCSDdoubles(F,Eri,T2,T1,nocc,nbas):
+	#Get the right hand side of the spinorbital CCSD singles equations. p. 307-308 of Bartlett and Shavitt
 	niter = 1
+	#p.307
     #Get CCD contribution
 	G = CCDutils.GHFCCD(F,Eri,T2,nocc,nbas,niter,variant="ccd")
+	G += np.einsum('cjab,ic->ijab',Eri[nocc:,:nocc,nocc:,nocc:],T1)
+	G -= np.einsum('ciab,jc->ijab',Eri[nocc:,:nocc,nocc:,nocc:],T1)
+	G -= np.einsum('ijkb,ka->ijab',Eri[:nocc,:nocc,:nocc,nocc:],T1)
+	G += np.einsum('ijka,kb->ijab',Eri[:nocc,:nocc,:nocc,nocc:],T1)
+	Tik = np.einsum('ck,ic->ik',F[nocc:,:nocc],T1)
+	G -= np.einsum('ik,kjab->ijab',Tik,T2)
+	G += np.einsum('jk,kiab->ijab',Tik,T2)
+	Tca = np.einsum('ck,ka->ca',F[nocc:,:nocc],T1)
+	G -= np.einsum('ca,ijcb->ijab',Tca,T2)
+	G += np.einsum('cb,ijca->ijab',Tca,T2)
+	Tidak = np.einsum('cdak,ic->idak',Eri[nocc:,nocc:,nocc:,:nocc],T1)
+	G    += np.einsum('idak,kjdb->ijab',Tidak,T2)
+	G    -= np.einsum('jdak,kidb->ijab',Tidak,T2)
+	G    -= np.einsum('idbk,kjda->ijab',Tidak,T2)
+	G    += np.einsum('jdbk,kida->ijab',Tidak,T2)
+	Tical = np.einsum('ickl,ka->ical',Eri[:nocc,nocc:,:nocc,:nocc],T1)
+	G    -= np.einsum('ical,ljcb->ijab',Tical,T2)
+	G    += np.einsum('jcal,licb->ijab',Tical,T2)
+	G    += np.einsum('icbl,ljca->ijab',Tical,T2)
+	G    -= np.einsum('jcbl,lica->ijab',Tical,T2)
+	Tcdab = np.einsum('cdkb,ka->cdab',Eri[:nocc,nocc:,nocc:,nocc:],T1)
+	G    -= 0.5e0*np.einsum('cdab,ijcd->ijab',Tcdab,T2)
+	Tcdba = np.einsum('cdka,kb->cdba',Eri[:nocc,nocc:,nocc:,nocc:],T1)
+	G    += 0.5e0*np.einsum('cdba,ijcd->ijab',Tcdba,T2)
+	#p. 308
+	G += 0.5e0*np.einsum('cjkl,ic,klab->ijab',Eri[nocc:,:nocc,:nocc,:nocc],T1,T2) #Turns out we can do multiple contractions at once
+	G -= 0.5e0*np.einsum('cikl,jc,klab->ijab',Eri[nocc:,:nocc,:nocc,:nocc],T1,T2) 
+	G += np.einsum('cdka,kc,ijdb->ijab',Eri[nocc:,nocc:,:nocc,nocc:],T1,T2) 
+	G -= np.einsum('cdkb,kc,ijda->ijab',Eri[nocc:,nocc:,:nocc,nocc:],T1,T2) 
+	G -= np.einsum('cikl,kc,ljab->ijab',Eri[nocc:,:nocc,:nocc,:nocc],T1,T2) 
+	G += np.einsum('cjkl,kc,liab->ijab',Eri[nocc:,:nocc,:nocc,:nocc],T1,T2) 
+	G += np.einsum('cdab,ic,jd->ijab',Eri[nocc:,nocc:,nocc:,nocc:],T1,T1)
+	G += np.einsum('ijkl,ka,lb->ijab',Eri[:nocc,:nocc,:nocc,:nocc],T1,T1)
+	G -= np.einsum('cjkb,ic,ka->ijab',Eri[nocc:,:nocc,:nocc,nocc:],T1,T1)
+	G += np.einsum('cikb,jc,ka->ijab',Eri[nocc:,:nocc,:nocc,nocc:],T1,T1)
+	G += np.einsum('cjka,ic,kb->ijab',Eri[nocc:,:nocc,:nocc,nocc:],T1,T1)
+	G -= np.einsum('cika,jc,kb->ijab',Eri[nocc:,:nocc,:nocc,nocc:],T1,T1)
+	G += 0.5e0*np.einsum('cdkl,ic,jd,klab->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T1,T1,T2)
+	G += 0.5e0*np.einsum('cdkl,ka,lb,ijcd->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T1,T1,T2)
+	G -= np.einsum('cdkl,ic,ka,ljdb->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T1,T1,T2)
+	G += np.einsum('cdkl,jc,ka,lidb->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T1,T1,T2)
+	G += np.einsum('cdkl,ic,kb,ljda->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T1,T1,T2)
+	G -= np.einsum('cdkl,jc,kb,lida->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T1,T1,T2)
+	G -= np.einsum('cdkl,kc,id,ljab->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T1,T1,T2)
+	G += np.einsum('cdkl,kc,jd,liab->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T1,T1,T2)
+	G -= np.einsum('cdkl,kc,la,ijdb->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T1,T1,T2)
+	G += np.einsum('cdkl,kc,lb,ijda->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T1,T1,T2)
+	G += np.einsum('cdkb,ic,ka,jd->ijab',Eri[nocc:,nocc:,:nocc,nocc:],T1,T1,T1)
+	G -= np.einsum('cdka,ic,kb,jd->ijab',Eri[nocc:,nocc:,:nocc,nocc:],T1,T1,T1)
+	G += np.einsum('cjkl,ic,ka,lb->ijab',Eri[nocc:,:nocc,:nocc,:nocc],T1,T1,T1)
+	G -=np.einsum('cikl,jc,ka,lb->ijab',Eri[nocc:,:nocc,:nocc,:nocc],T1,T1,T1)
+	G += np.einsum('cdkl,ic,jd,ka,lb->ijab',Eri[nocc:,:nocc,:nocc,:nocc],T1,T1,T1,T1)
+
+
 
 	return G
 
