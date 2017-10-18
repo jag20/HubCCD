@@ -15,11 +15,13 @@ with open(flnm, "w") as f:
     print("U = ", U)
     #Build hamiltonian and do RHF
     hub = ham.hub(nsitesx=10,nsitesy=1,U=U,fill=0.5,PeriodicX=True)
-    hub.get_ints(wfn_type="uhf")
-    #Do attenuated coupled cluster
-    CCD.ccd(hub,ampfile="amps",variant="acpq")
-	#Do CCSD
+    hub.get_ints(wfn_type="rhf")
+	#Do CCD
+#    CCD.ccd(hub,ampfile="none",variant="ccd")
+#    print("ECCD = ", hub.ecorr, "escf = ", hub.escf)
+	#Do CCSD, need spin-orbital integrals, so we do 'uhf' first
     CCSD.ccsd(hub,ampfile="none")
-    f.write(str(U) + "   " + str(hub.eccd) + "  "+ str(hub.escf) + "\n")
+    print("ECCSD = ", hub.ecorr, "escf = ", hub.escf)
+    f.write(str(U) + "   " + str(hub.ecorr) + "  "+ str(hub.escf) + "\n")
  
 

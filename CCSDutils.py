@@ -45,7 +45,8 @@ def solveccs(F,G1,T1,nocc,nvirt,x=4.0):
 	for i in range(nocc):
 		for a in range(nvirt):
 			aa = a + nocc
-			T1new[i,a] = G1[i,a]/(F[i,i] - F[aa,aa])
+			d = (F[i,i] - F[aa,aa])
+			T1new[i,a] = G1[i,a]/d
 	#Damp amplitudes to improve convergence
 	return(T1new/x + T1*(x-1.0)/x)
 

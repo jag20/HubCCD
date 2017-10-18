@@ -274,7 +274,8 @@ def solveccd(F,G,T,nocc,nvirt,x=4.0):
         aa = a + nocc
         for b in range(nvirt):
           bb = b + nocc
-          Tnew[i,j,a,b] = G[i,j,a,b]/(F[i,i] + F[j,j] - F[aa,aa] - F[bb,bb])
+          d = (F[i,i] + F[j,j] - F[aa,aa] - F[bb,bb])
+          Tnew[i,j,a,b] = G[i,j,a,b]/d
   #Damp amplitudes to improve convergence
   return(Tnew/x + T*(x-1.0)/x)
 
