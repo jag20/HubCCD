@@ -26,8 +26,8 @@ def ccsd(ham,ampfile="none"):
 			T2 = pickle.load(f)
 			T1 = pickle.load(f)
 
-		E2 = CCDutils.GCCDEn(Eri,T,nocc)
-		E1 = GCCSEn(F,Eri,T1,nocc)
+		E2 = CCDutils.GCCDEn(ham.Eri,T2,ham.nocc)
+		E1 = GCCSEn(ham.F,ham.Eri,T1,ham.nocc)
 		ecorr = E1 + E2
 		eold = ecorr
 	else:
@@ -65,8 +65,8 @@ def ccsd(ham,ampfile="none"):
 
 	if ((ampfile != 'none')):
 		with open(ampfile, 'wb') as f:
-			T2 = pickle.dump(f)
-			T1 = pickle.dump(f)
+			pickle.dump(T2,f)
+			pickle.dump(T1,f)
 
 	ham.ecorr = ecorr
 	

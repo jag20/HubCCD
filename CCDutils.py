@@ -28,6 +28,7 @@ def RHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
   nvirt = nbas-nocc
   c2 = (1.0e0/2.0e0)*(3.0e0/5.0e0)
   
+
   #Linear terms
   G = Lin(Eri,T,nocc)
   if (variant == "lin"):
@@ -53,10 +54,10 @@ def RHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
       G += Attenuate(Eri,T, nocc, nvirt,attnum=1,c2=3.0/10.0)
 
 
-    if (variant == "acpq"):
-    # don't forget 9* the triplet ladder for ACPQ
-      G += 4*L - 4*np.swapaxes(L,2,3)
-
+#    if (variant == "acpq"):
+#    # don't forget 9* the triplet ladder for ACPQ
+#      G += 4*L - 4*np.swapaxes(L,2,3)
+#
     return G
     
 
@@ -220,14 +221,19 @@ def soRings(Eri, T, nocc):
 
 def soMosaics(Eri, T, nocc):
     ik = np.einsum('ilcd,cdkl->ik',T,Eri[nocc:,nocc:,:nocc,:nocc])
-    M  = -1.0/2.0*np.einsum('kjab,ik->ijab',T,ik)
-    M += -1.0/2.0*np.einsum('ikab,kj->ijab',T,ik)
+#    M  = -1.0/2.0*np.einsum('kjab,ik->ijab',T,ik)
+#    M += -1.0/2.0*np.einsum('ikab,kj->ijab',T,ik)
+    M   = -1.0/2.0*np.einsum('cdkl,ilcd,kjab->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T,T)
+#    M += -1.0/2.0*np.einsum('ikab,kj->ijab',T,ik)
+    M  += 1.0/2.0*np.einsum('cdkl,ljcd,ikab->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T,T)
     return M
 
 def soMosaicsph(Eri, T, nocc):
-    ac = np.einsum('klad,cdkl->ac',T,Eri[nocc:,nocc:,:nocc,:nocc])
-    Mph  = -1.0/2.0*np.einsum('ijcb,ac->ijab',T,ac)
-    Mph += -1.0/2.0*np.einsum('ijac,cb->ijab',T,ac)
+#    ac = np.einsum('klad,cdkl->ac',T,Eri[nocc:,nocc:,:nocc,:nocc])
+#    Mph  = -1.0/2.0*np.einsum('ijcb,ac->ijab',T,ac)
+#    Mph += -1.0/2.0*np.einsum('ijac,cb->ijab',T,ac)
+    Mph  = -1.0/2.0*np.einsum('cdkl,klad,ijcb->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T,T)
+    Mph += 1.0/2.0*np.einsum('cdkl,kldb,ijac->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T,T)
     return Mph
 
 def pAttenuate(Eri,T, nocc, nvirt,attnum=1,c2=1.0/4.0):

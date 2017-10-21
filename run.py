@@ -11,7 +11,7 @@ flnm = "./Output"
 print("Writing results to ", flnm)
 with open(flnm, "w") as f:
    f.write("U" + "     " + "Ecorr" + "            "+ "Escf" + "\n")
-   for U in np.arange(1.,20.1,1):
+   for U in np.arange(8.,20.1,1):
     print("U = ", U)
     #Build hamiltonian and do RHF
     hub = ham.hub(nsitesx=6,nsitesy=1,U=U,fill=0.5,PeriodicX=True)
@@ -21,7 +21,7 @@ with open(flnm, "w") as f:
 #    print("ECCD = ", hub.ecorr, "escf = ", hub.escf)
 	#Do CCSD, need spin-orbital integrals, so we do 'uhf' first
     hub.get_ints(wfn_type="uhf")
-    CCSD.ccsd(hub,ampfile="none")
+    CCSD.ccsd(hub,ampfile="amps")
 #    print("ECCSD = ", hub.ecorr, "escf = ", hub.escf)
     f.write(str(U) + "   " + str(hub.ecorr) + "  "+ str(hub.escf) + "\n")
  
