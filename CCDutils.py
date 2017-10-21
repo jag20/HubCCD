@@ -155,7 +155,7 @@ def Attenuate(Eri,T, nocc, nvirt,attnum=1,c2=3.0/10.0):
 ##GHF-based utilities
 def GHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
  #This function gets the right hand side of the ghf-based CCD equations. (The G in HT=G)
- #Terms quadratic in T are divided up into Ladder, Ring and Mosaic diagrams. See Bulik, Henderson and Scuseria, JCTC 11(7), 3171 (2015). Note the type on the sign of the mosaic terms in the reference.
+ #Terms quadratic in T are divided up into Ladder, Ring and Mosaic diagrams. See Bulik, Henderson and Scuseria, JCTC 11(7), 3171 (2015). Note the typo on the sign of the mosaic terms in the JCTC paper. The 2nd and 4th mosaic terms should have opposite sign.
  #Diagrams have coefficients alpha and beta from parametrized CCD. See Nooijen, JCP 133, 184109 (2010)
  # CCD variants
  # variant = "ccd"   (the default, standard CCD)
@@ -220,18 +220,11 @@ def soRings(Eri, T, nocc):
     return R
 
 def soMosaics(Eri, T, nocc):
-    ik = np.einsum('ilcd,cdkl->ik',T,Eri[nocc:,nocc:,:nocc,:nocc])
-#    M  = -1.0/2.0*np.einsum('kjab,ik->ijab',T,ik)
-#    M += -1.0/2.0*np.einsum('ikab,kj->ijab',T,ik)
     M   = -1.0/2.0*np.einsum('cdkl,ilcd,kjab->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T,T)
-#    M += -1.0/2.0*np.einsum('ikab,kj->ijab',T,ik)
     M  += 1.0/2.0*np.einsum('cdkl,ljcd,ikab->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T,T)
     return M
 
 def soMosaicsph(Eri, T, nocc):
-#    ac = np.einsum('klad,cdkl->ac',T,Eri[nocc:,nocc:,:nocc,:nocc])
-#    Mph  = -1.0/2.0*np.einsum('ijcb,ac->ijab',T,ac)
-#    Mph += -1.0/2.0*np.einsum('ijac,cb->ijab',T,ac)
     Mph  = -1.0/2.0*np.einsum('cdkl,klad,ijcb->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T,T)
     Mph += 1.0/2.0*np.einsum('cdkl,kldb,ijac->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T,T)
     return Mph

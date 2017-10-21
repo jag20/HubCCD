@@ -24,7 +24,7 @@ def ccd(ham,ampfile="none",variant="ccd"):
     eold = 0.0e0
 
   Told = np.copy(T)
-  tol = 1.0e-08
+  tol = 1.0e-010
 
   #Set up for CCD iteration and DIIS
   diis_start, diis_dim, Errors, Ts, Err_vec = diis_setup(ham.nocc,ham.nvirt)
@@ -42,6 +42,8 @@ def ccd(ham,ampfile="none",variant="ccd"):
     ecorr = energy(ham.Eri,T,ham.nocc)
     
     niter += 1
+
+    print("Energy = ", ecorr, "error = ", error)
     ham.ecorr = ecorr
     ham.T = T
 
