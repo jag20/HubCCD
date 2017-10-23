@@ -11,7 +11,7 @@ flnm = "./Output"
 print("Writing results to ", flnm)
 with open(flnm, "w") as f:
    f.write("U" + "     " + "Ecorr" + "            "+ "Escf" + "\n")
-   for U in np.arange(1.,20.1,1):
+   for U in np.arange(5.,20.1,1):
     print("U = ", U)
     #Build hamiltonian and do RHF
     hub = ham.hub(nsitesx=4,nsitesy=2,U=U,fill=3./8.,PeriodicX=False)
