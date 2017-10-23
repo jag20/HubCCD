@@ -5,7 +5,9 @@ reference, but we have not implemented GHF yet.
 The SCF and Post-SCF routines can be used for general Hamiltonians, but the code only knows
 how to generate integrals for 1D and 2D Hubbard lattices with nearest-neighbor interactions
 and open or periodic boundary conditions.
-Required Packages: numpy, os, pickle
+
+Required Packages: numpy, os, pickle. If molecular calculations are desired, we also need Gaussian16 and their Fortran/python
+routines for accessing Gaussian matrix element files: http://gaussian.com/interfacing/
 
 # Motivation
 This code base is useful for benchmarking and rapid implementation of CCD-based theories.
