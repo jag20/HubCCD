@@ -145,7 +145,6 @@ def Attenuate(Eri,T, nocc, nvirt,attnum=1,c2=3.0/10.0):
     M = Mosaics(Eri, K, nocc)
     Mph = Mosaicsph(Eri, K, nocc)
 
-
     #"unlinked" piece
     vbar = (2*Eri - np.swapaxes(Eri,0,1))[nocc:,nocc:,:nocc,:nocc]
     eccd = np.einsum('abij,ijab',vbar,K)
@@ -156,7 +155,7 @@ def Attenuate(Eri,T, nocc, nvirt,attnum=1,c2=3.0/10.0):
 ##GHF-based utilities
 def GHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
  #This function gets the right hand side of the ghf-based CCD equations. (The G in HT=G)
- #Terms quadratic in T are divided up into Ladder, Ring and Mosaic diagrams. See Bulik, Henderson and Scuseria, JCTC 11(7), 3171 (2015). Note the typo on the sign of the mosaic terms in the JCTC paper. The 2nd and 4th mosaic terms should have opposite sign.
+ #Terms quadratic in T are divided up into Ladder, Ring and Mosaic diagrams. See Bulik, Henderson and Scuseria, JCTC 11(7), 3171 (2015). Note the type on the sign of the mosaic terms in the reference.
  #Diagrams have coefficients alpha and beta from parametrized CCD. See Nooijen, JCP 133, 184109 (2010)
  # CCD variants
  # variant = "ccd"   (the default, standard CCD)
@@ -175,16 +174,6 @@ def GHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
 
   #Linear terms
   G = soLin(Eri,T,nocc)
-
-  #Get off-diagonal Fock terms if we're in a non-canonical basis
-  tol = 1.0e-06
-  F_offdiag = F - np.diag(np.diag(F))
-  if np.amax(abs(F_offdiag) > tol):
-    G += np.einsum('bc,ijac->ijab',F_offdiag[nocc:,nocc:],T)
-    G += np.einsum('ac,ijcb->ijab',F_offdiag[nocc:,nocc:],T)
-    G -= np.einsum('kj,ikab->ijab',F_offdiag[:nocc,:nocc],T)
-    G -= np.einsum('ki,kjab->ijab',F_offdiag[:nocc,:nocc],T)
-
   if (variant == "lin"):
      #Linearized Coupled Cluster
     return G

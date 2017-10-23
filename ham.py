@@ -1,5 +1,6 @@
 import numpy as np
 from scf import *
+from readints import read_ints 
 #This module builds the Hamiltonian object needed for post-Hartree-Fock methods (i.e. MO-basis integrals). 
 #Current support is restricted to molecules (which require input of external integral file, RHF only for now) and
 #1D and 2D Hubbard with nearest-neighbor interaction (open or periodic boundary conditions).
@@ -90,13 +91,14 @@ class hub(ham):
    if (wfn_type == "rhf"):
    #do RHF and transform to MO basis for Post-HF calculation
      RHF(self,denfile)
-     self.F, self.Eri = MO_tran(self.F,self.Eri,self.C)
+     self.F   = onee_MO_tran(self.F,self.C)
+     self.ERI = twoe_MO_tran(self.Eri,self.C,self.C)
 
    elif (wfn_type == "uhf"):
    #Do UHF and transform to MO basis for Post-HF calculation. Note we only have support for spin-orbital coupled cluster at this point. 
    #We could do true GHF-CCD, but do not have support for finding actual Sz-broken GHF solutions right now.
      F_a, F_b, C_a, C_b = UHF(self,denfile)
-     F_GHF, Eri_GHF, C_GHF = UHF_to_GHF(C_a,C_b,F_a,F_b,self.Eri,self.nocc,self.nocc,self.nbas)
+     F_GHF, Eri_GHF, C_GHF = ao_to_GHF(C_a,C_b,F_a,F_b,self.Eri,self.nocc,self.nocc,self.nbas)
      self.F, self.Eri, self.C = np.copy(F_GHF), np.copy(Eri_GHF), np.copy(C_GHF)
      self.nbas = 2*self.nbas
      self.nocc = 2*self.nocc
@@ -104,21 +106,18 @@ class hub(ham):
 
 class mol(ham):
 
-  def __init__(self):
+  def __init__(self,wfn_type,fname):
     super(mol, self).__init__()
     self.hamtype = "Molecule"
-
-  def get_ints(self,fname,wfn_type="rhf"):
-    self.wfn_type = wfn_type
-    self.intfile=fname
-    with open(fname) as f:
-      fle = f.readlines()
-      self.nbas = int(fle[0])
-      self.nocc = int(fle[1])
-      self.nvirt = self.nbas-self.nocc 
-      self.escf = float(fle[-1])
-      self.Eri = np.array(fle[2:self.nbas**4+2]).reshape((self.nbas,self.nbas,self.nbas,self.nbas), order='F')
-      self.F = np.array(fle[self.nbas**4+2: self.nbas**4+2 + self.nbas**2]).reshape([self.nbas,self.nbas], order = 'F')
-      self.Eri = self.Eri.astype(float)
-      self.F= self.F.astype(float)
+    self.wfn_type = wfn_type.lower()
+    #We can only do molecular calculations if we read integrals from a Gaussian16 Matrix Element File for now.
+    if (self.wfn_type == 'rhf'):
+      self.nbas, self.nocc, self.nvirt, self.escf, self.C, self.F, self.Eri = read_ints(self.wfn_type,fname)
+    elif (self.wfn_type == 'uhf'):
+      self.nbas, self.nocca, self.noccb, self.nvirta, self.nvirtb, self.escf, C_a, C_b, F_a, F_b, Eri_aa = read_ints(self.wfn_type,fname)
+      F_GHF, Eri_GHF, C_GHF = moUHF_to_GHF(C_a,C_b,F_a,F_b,Eri_aa,self.nocca,self.noccb,self.nbas)
+      self.F, self.Eri, self.C = np.copy(F_GHF), np.copy(Eri_GHF), np.copy(C_GHF)
+      self.nbas = 2*self.nbas
+      self.nocc = self.nocca + self.noccb
+      self.nvirt = self.nvirta + self.nvirtb
 
