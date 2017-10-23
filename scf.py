@@ -180,11 +180,11 @@ def onee_MO_tran(F,C):
 
 def twoe_MO_tran(Eri,C_1,C_2):
   #Transform one- and two-electron integrals to MO basis. The transformation of the 4-index array can be worked out by writing the 
-  #basis transformation of a normal 2-D matrix as sums over the matrix elements. Input array assumed to be mulliken ordering (ia|jb).
-  #Output integrals are in Dirac ordering <ij|ab>
+  #basis transformation of a normal 2-D matrix as sums over the matrix elements. Input array assumed to be mulliken ordering (pq|rs).
+  #Output integrals are in Dirac ordering <pr|qs>
   Eri_temp  = np.einsum('us,pqru->pqrs',C_2,Eri)
   Eri       = np.einsum('ur,pqus->pqrs',C_1,Eri_temp)
   Eri_temp  = np.einsum('uq,purs->pqrs',C_2,Eri)
   Eri       = np.einsum('up,uqrs->pqrs',C_1,Eri_temp)
-  Eri = np.swapaxes(Eri,1,2) #Convert to Dirac ordering if we're not already in Dirac ordering. No effect on Hubbard, since Eri is diagonal in that case.
+  Eri = np.swapaxes(Eri,1,2) #Convert to Dirac ordering 
   return Eri

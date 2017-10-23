@@ -92,7 +92,7 @@ class hub(ham):
    #do RHF and transform to MO basis for Post-HF calculation
      RHF(self,denfile)
      self.F   = onee_MO_tran(self.F,self.C)
-     self.ERI = twoe_MO_tran(self.Eri,self.C,self.C)
+     self.Eri = twoe_MO_tran(self.Eri,self.C,self.C)
 
    elif (wfn_type == "uhf"):
    #Do UHF and transform to MO basis for Post-HF calculation. Note we only have support for spin-orbital coupled cluster at this point. 

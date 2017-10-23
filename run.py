@@ -14,15 +14,16 @@ with open(flnm, "w") as f:
    for U in np.arange(5.,20.1,1):
     print("U = ", U)
     #Build hamiltonian and do RHF
-    hub = ham.hub(nsitesx=4,nsitesy=2,U=U,fill=3./8.,PeriodicX=False)
-#    hub.get_ints(wfn_type="rhf")
+    hub = ham.hub(nsitesx=10,nsitesy=1,U=U,fill=1./2.,PeriodicX=True)
+    hub.get_ints(wfn_type="rhf")
 	#Do CCD
-#    CCD.ccd(hub,ampfile="none",variant="ccd")
+    print(hub.Eri)
+    CCD.ccd(hub,ampfile="none",variant="ccd")
 #    print("ECCD = ", hub.ecorr, "escf = ", hub.escf)
 	#Do CCSD, need spin-orbital integrals, so we do 'uhf' first
-    hub.get_ints(wfn_type="uhf")
+#    hub.get_ints(wfn_type="uhf")
 #    CCSD.ccsd(hub,ampfile="amps")
-    CCD.ccd(hub,ampfile="amps",variant="ccd")
+#    CCD.ccd(hub,ampfile="amps",variant="ccd")
 #    print("ECCSD = ", hub.ecorr, "escf = ", hub.escf)
     f.write(str(U) + "   " + str(hub.ecorr) + "  "+ str(hub.escf) + "\n")
  
