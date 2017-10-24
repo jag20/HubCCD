@@ -176,7 +176,7 @@ def GHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
   #Linear terms
   G = soLin(Eri,T,nocc)
   #Get off-diagonal Fock terms if we're in a non-canonical basis
-  tol = 1.0e-06
+  tol = 1.0e-07
   F_offdiag = F - np.diag(np.diag(F))
   if np.amax(abs(F_offdiag) > tol):
     G += np.einsum('bc,ijac->ijab',F_offdiag[nocc:,nocc:],T)

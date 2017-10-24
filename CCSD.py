@@ -1,5 +1,5 @@
 from CCSDutils import *
-from CCDutils import  *
+import CCDutils 
 import os
 import pickle
 import CCD
@@ -14,40 +14,6 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 		ham.nocc  *= 2
 		ham.nvirt *= 2
 		ham.wfn_type = 'uhf'
-#	CCD.ccd(ham,variant=variant)
-
-##	Gs  = {"uhf":GHFCCD, "rhf": RHFCCD}
-##	ens = {"uhf":GCCDEn, "rhf": RCCDEn}
-##	
-##	
-##	getG   = Gs[ham.wfn_type]
-##	energy = ens[ham.wfn_type]
-##	T = np.zeros([ham.nocc,ham.nocc,ham.nvirt,ham.nvirt])
-##	Told = np.copy(T)
-##	diis_start, diis_dim, Errors, Ts, Err_vec = diis_setup(ham.nocc,ham.nvirt)
-##	eold = 0.0e0
-##	
-##	Told = np.copy(T)
-##	tol = 1.0e-06
-##	#Do CCD
-##	niter = 1
-##	error = tol*50
-##	while (error > tol):
-##		#extrapolate amplitudes using DIIS
-###		T, Errors, Ts = diis(diis_start,diis_dim,niter,Errors,Ts,T,Err_vec)
-##		G = getG(ham.F,ham.Eri,T,ham.nocc,ham.nbas,niter,variant=variant)
-##		error, Err_vec = get_Err(ham.F,G,T,ham.nocc,ham.nvirt)
-##		
-##		T = solveccd(ham.F,G,T,ham.nocc,ham.nvirt)
-##		ecorr = energy(ham.Eri,T,ham.nocc)
-##		
-##		niter += 1
-##		
-##		print("Energy = ", ecorr, "error = ", error)
-##		ham.ecorr = ecorr
-##		ham.T = T
-##	return
-
 
 #read amplitudes from file if present to improve convergence
 	if ((ampfile != 'none') and(os.path.isfile(ampfile))):
@@ -68,29 +34,29 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	diis_start, diis_dim, Errors, T2s, Err_vec = CCDutils.diis_setup(ham.nocc,ham.nvirt)
 	G2 = CCSDdoubles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas,variant)
 	niter = 1
-	tol = 1.0e-7
+	tol = 1.0e-9
 	error = tol*50
 
 	print("Beginning CCSD iteration")
 	while (error > tol):
 		T2, Errors, T2s = CCDutils.diis(diis_start,diis_dim,niter,Errors,T2s,T2,Err_vec)
    	#build RHS
-#		G1 = CCSDsingles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
+		G1 = CCSDsingles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
+
 		G2 = CCSDdoubles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas,variant)
 		#Get error
 		error, Err_vec = CCDutils.get_Err(ham.F,G2,T2,ham.nocc,ham.nvirt)
-#		G2 = CCDutils.GHFCCD(ham.F,ham.Eri,T2,ham.nocc,ham.nbas,niter,variant)
 
    	#solve H
-#		T1 = solveccs(ham.F,G1,T1,ham.nocc,ham.nvirt,x=1.0)
+		T1 = solveccs(ham.F,G1,T1,ham.nocc,ham.nvirt,x=1.0)
 		T2 = CCDutils.solveccd(ham.F,G2,T2,ham.nocc,ham.nvirt,x=4.0)
 
    	#get energies
-#		E1 = GCCSEn(ham.F,ham.Eri,T1,ham.nocc)
-		E1 = 0.0e0
+		E1 = GCCSEn(ham.F,ham.Eri,T1,ham.nocc)
+#		E1 = 0.0e0
 		E2 = CCDutils.GCCDEn(ham.Eri,T2,ham.nocc)
 		ecorr = E1 + E2
-		error = np.abs(ecorr-eold)
+#		error = np.abs(ecorr-eold)
 		print("Energy = ", ecorr, "error = ", error)
 		eold = ecorr 
 		niter += 1  
