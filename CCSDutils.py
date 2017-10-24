@@ -85,6 +85,12 @@ def CCSDsingles(F,Eri,T2,T1,nocc,nbas):
 	G += np.einsum('cdak,ic,kd->ia',Eri[nocc:,nocc:,nocc:,:nocc],T1,T1) 
 	G -= np.einsum('ickl,ka,lc->ia',Eri[:nocc,nocc:,:nocc,:nocc],T1,T1)
 	G -= np.einsum('cdkl,ic,ka,ld->ia',Eri[nocc:,nocc:,:nocc,:nocc],T1,T1,T1)
+	#Don't forget other non-canonical terms
+	tol = 1.0e-07
+	F_offdiag = F - np.diag(np.diag(F))
+	if np.amax(abs(F_offdiag) > tol):
+		G += np.einsum('ca,ic->ia',F_offdiag[nocc:,nocc:],T1)
+		G -= np.einsum('ik,ka->ia',F_offdiag[:nocc,:nocc],T1)
 	return G
 
 def solveccs(F,G1,T1,nocc,nvirt,x=4.0):

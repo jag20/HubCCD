@@ -174,16 +174,7 @@ def GHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
     beta  = 1.0
 
   #Linear terms
-  G = soLin(Eri,T,nocc)
-  #Get off-diagonal Fock terms if we're in a non-canonical basis
-  tol = 1.0e-07
-  F_offdiag = F - np.diag(np.diag(F))
-  if np.amax(abs(F_offdiag) > tol):
-    G += np.einsum('bc,ijac->ijab',F_offdiag[nocc:,nocc:],T)
-    G += np.einsum('ac,ijcb->ijab',F_offdiag[nocc:,nocc:],T)
-    G -= np.einsum('kj,ikab->ijab',F_offdiag[:nocc,:nocc],T)
-    G -= np.einsum('ki,kjab->ijab',F_offdiag[:nocc,:nocc],T)
-
+  G = soLin(F,Eri,T,nocc)
   if (variant == "lin"):
      #Linearized Coupled Cluster
     return G
@@ -208,7 +199,7 @@ def GHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
 
   return G
     
-def soLin(Eri,T,nocc):
+def soLin(F,Eri,T,nocc):
   G = np.copy(Eri[:nocc,:nocc,nocc:,nocc:])
   G += 1.0/2.0*np.einsum('klab,ijkl->ijab',T,Eri[:nocc,:nocc,:nocc,:nocc])
   G += 1.0/2.0*np.einsum('ijcd,cdab->ijab',T,Eri[nocc:,nocc:,nocc:,nocc:])
@@ -216,6 +207,15 @@ def soLin(Eri,T,nocc):
   G += np.einsum('kjcb,cika->ijab',T,Eri[nocc:,:nocc,:nocc,nocc:])
   G -= np.einsum('ikbc,cjka->ijab',T,Eri[nocc:,:nocc,:nocc,nocc:])
   G -= np.einsum('kjca,cikb->ijab',T,Eri[nocc:,:nocc,:nocc,nocc:])
+  #Get off-diagonal Fock terms if we're in a non-canonical basis
+  tol = 1.0e-07
+  F_offdiag = F - np.diag(np.diag(F))
+  if np.amax(abs(F_offdiag) > tol):
+    G += np.einsum('bc,ijac->ijab',F_offdiag[nocc:,nocc:],T)
+    G += np.einsum('ac,ijcb->ijab',F_offdiag[nocc:,nocc:],T)
+    G -= np.einsum('kj,ikab->ijab',F_offdiag[:nocc,:nocc],T)
+    G -= np.einsum('ki,kjab->ijab',F_offdiag[:nocc,:nocc],T)
+
   return G
 
 def soLadder(Eri, T, nocc):
