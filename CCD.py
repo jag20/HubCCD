@@ -14,7 +14,7 @@ def ccd(ham,ampfile="none",variant="ccd"):
    
 
   #read amplitudes from file if present to improve convergence
-  if (os.path.isfile(ampfile)):
+  if ((ampfile != 'none') and(os.path.isfile(ampfile))):
     with open(ampfile, 'rb') as f:
       T = pickle.load(f)
       ecorr = energy(ham.Eri,T,ham.nocc)

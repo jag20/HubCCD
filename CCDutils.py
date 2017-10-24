@@ -163,6 +163,7 @@ def GHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
  #   	   = "lin"   (linearized CCD, i.e. no quadratic terms)
  #         = "acpq"  (ACPQ)
   variant = variant.lower()
+#  print("variant = ", variant)
   nvirt = nbas-nocc
 
   if (variant == "acpq"):
@@ -174,6 +175,15 @@ def GHFCCD(F,Eri,T,nocc,nbas,niter,variant="ccd"):
 
   #Linear terms
   G = soLin(Eri,T,nocc)
+  #Get off-diagonal Fock terms if we're in a non-canonical basis
+  tol = 1.0e-06
+  F_offdiag = F - np.diag(np.diag(F))
+  if np.amax(abs(F_offdiag) > tol):
+    G += np.einsum('bc,ijac->ijab',F_offdiag[nocc:,nocc:],T)
+    G += np.einsum('ac,ijcb->ijab',F_offdiag[nocc:,nocc:],T)
+    G -= np.einsum('kj,ikab->ijab',F_offdiag[:nocc,:nocc],T)
+    G -= np.einsum('ki,kjab->ijab',F_offdiag[:nocc,:nocc],T)
+
   if (variant == "lin"):
      #Linearized Coupled Cluster
     return G

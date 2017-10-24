@@ -4,12 +4,13 @@ import CCDutils
 
 
 ##Spin-orbital-based utilities
-def CCSDdoubles(F,Eri,T2,T1,nocc,nbas):
+def CCSDdoubles(F,Eri,T2,T1,nocc,nbas,variant):
 	#Get the right hand side of the spinorbital CCSD singles equations. p. 307-308 of Bartlett and Shavitt
 	niter = 1
 	#p.307
     #Get CCD contribution
-	G = CCDutils.GHFCCD(F,Eri,T2,nocc,nbas,niter,variant="ccd")
+	G = CCDutils.GHFCCD(F,Eri,T2,nocc,nbas,niter,variant)
+#	return G
 	G += np.einsum('cjab,ic->ijab',Eri[nocc:,:nocc,nocc:,nocc:],T1)
 	G -= np.einsum('ciab,jc->ijab',Eri[nocc:,:nocc,nocc:,nocc:],T1)
 	G -= np.einsum('ijkb,ka->ijab',Eri[:nocc,:nocc,:nocc,nocc:],T1)
@@ -30,9 +31,9 @@ def CCSDdoubles(F,Eri,T2,T1,nocc,nbas):
 	G    += np.einsum('jcal,licb->ijab',Tical,T2)
 	G    += np.einsum('icbl,ljca->ijab',Tical,T2)
 	G    -= np.einsum('jcbl,lica->ijab',Tical,T2)
-	Tcdab = np.einsum('cdkb,ka->cdab',Eri[:nocc,nocc:,nocc:,nocc:],T1)
+	Tcdab = np.einsum('cdkb,ka->cdab',Eri[nocc:,nocc:,:nocc,nocc:],T1)
 	G    -= 0.5e0*np.einsum('cdab,ijcd->ijab',Tcdab,T2)
-	Tcdba = np.einsum('cdka,kb->cdba',Eri[:nocc,nocc:,nocc:,nocc:],T1)
+	Tcdba = np.einsum('cdka,kb->cdba',Eri[nocc:,nocc:,:nocc,nocc:],T1)
 	G    += 0.5e0*np.einsum('cdba,ijcd->ijab',Tcdba,T2)
 	#p. 308
 	G += 0.5e0*np.einsum('cjkl,ic,klab->ijab',Eri[nocc:,:nocc,:nocc,:nocc],T1,T2) #Turns out we can do multiple contractions at once
@@ -61,9 +62,7 @@ def CCSDdoubles(F,Eri,T2,T1,nocc,nbas):
 	G -= np.einsum('cdka,ic,kb,jd->ijab',Eri[nocc:,nocc:,:nocc,nocc:],T1,T1,T1)
 	G += np.einsum('cjkl,ic,ka,lb->ijab',Eri[nocc:,:nocc,:nocc,:nocc],T1,T1,T1)
 	G -=np.einsum('cikl,jc,ka,lb->ijab',Eri[nocc:,:nocc,:nocc,:nocc],T1,T1,T1)
-	G += np.einsum('cdkl,ic,jd,ka,lb->ijab',Eri[nocc:,:nocc,:nocc,:nocc],T1,T1,T1,T1)
-
-
+	G += np.einsum('cdkl,ic,jd,ka,lb->ijab',Eri[nocc:,nocc:,:nocc,:nocc],T1,T1,T1,T1)
 
 	return G
 
