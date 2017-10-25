@@ -93,6 +93,32 @@ def CCSDsingles(F,Eri,T2,T1,nocc,nbas):
 		G -= np.einsum('ik,ka->ia',F_offdiag[:nocc,:nocc],T1)
 	return G
 
+def CCSDsingles_fact(F,Eri,T2,T1,nocc,nbas):
+    #build intermediates according to Stanton et al. JCP 94(6) 1991
+    F_diag = np.diag(np.diag(F))
+    Tau_tilde = T2 + 0.50e0*(np.einsum('ia,jb->ijab',T1,T1)-np.einsum('ib,ja->ijab',T1,T1))
+    Fae = F[nocc:,nocc:] - F_diag[nocc:,nocc:] 
+    Fae -= 0.5e0*(np.einsum('em,ma->ea',F[nocc:,:nocc],T1))
+    Fae += np.einsum('mf,fema->ea',T1,Eri[:nocc,nocc:,:nocc,nocc:])
+    Fae -= 0.5e0*np.einsum('mnaf,efmn->ea',Tau_tilde,Eri[nocc:,nocc:,:nocc,:nocc])
+
+    Fmi = F[:nocc,:nocc] - F_diag[:nocc,:nocc] 
+    Fmi += 0.5e0*(np.einsum('em,ie->im',F[nocc:,:nocc],T1))
+    Fmi += np.einsum('ne,iemn->im',T1,Eri[:nocc,nocc:,:nocc,:nocc])
+    Fmi += 0.5e0*np.einsum('inef,efmn->im',Tau_tilde,Eri[nocc:,nocc:,:nocc,:nocc])
+
+    Fme = F[nocc:,:nocc] + np.einsum('nf,efmn->em',T1,Eri[nocc:,nocc:,:nocc,:nocc]
+
+    G = F[nocc:,:nocc] + np.einsum('ie,ea->ia',T1,Fae)
+    G -= np.einsum('ma,im->ia',T1,Fmi)
+    G += np.einsum('imae,em->ia',T2,Fme)
+    G -= np.einsum('nf,ifna->ia',T1,Eri[:nocc,nocc:,:nocc,nocc:])
+    G -= 0.5e0*np.einsum('imef,efma->ia',T2,Eri[nocc:,:nocc,:nocc,nocc:])
+    G -= 0.5e0*np.einsum('mnae,einm->ia',T2,Eri[nocc:,:nocc,:nocc,:nocc])
+    return G
+
+
+
 def solveccs(F,G1,T1,nocc,nvirt,x=4.0):
 	#solve singles amplitude equations
 	T1new = np.zeros(np.shape(T1))
