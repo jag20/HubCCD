@@ -60,7 +60,7 @@ def UHF(ham,denfile):
   F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
   #Set some values and do the UHF iteration
   error = 1.0
-  tol = 1.0e-8
+  tol = 1.0e-12
   eold = 1.0
   niter = 1
   x = 5.0

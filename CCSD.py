@@ -33,33 +33,39 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	#Set up for CCD iteration and DIIS. interpolate doubles only for now
 	diis_start, diis_dim, Errors, T2s, Err_vec = CCDutils.diis_setup(ham.nocc,ham.nvirt)
 	T1Errors, T1s, T1Err_vec = diis_singles_setup(ham.nocc,ham.nvirt,diis_start,diis_dim)
-	G1 = CCSDsingles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
-	G2 = CCSDdoubles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas,variant)
+	G1 = CCSDsingles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
+	G2 = CCSDdoubles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
 	niter = 1
 	tol = 1.0e-9
 	error = tol*50
 
 	print("Beginning CCSD iteration")
 	while (error > tol):
-#		T2, Errors, T2s = CCDutils.diis(diis_start,diis_dim,niter,Errors,T2s,T2,Err_vec)
-   	#build RHS
-#		G1 = CCSDsingles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
-#            G2 = CCSDdoubles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas,variant)
+		T2, Errors, T2s   = CCDutils.diis(diis_start,diis_dim,niter,Errors,T2s,T2,Err_vec)
+		T1, T1Errors, T1s = diis_singles(diis_start,diis_dim,niter,T1Errors,T1s,T1,T1Err_vec)
+   	#build RHS G
 		G1 = CCSDsingles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
 		G2 = CCSDdoubles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
-		#Get error
-		error, Err_vec = CCDutils.get_Err(ham.F,G2,T2,ham.nocc,ham.nvirt)
 
-   	#solve H
+#	#Get error vecs (residuals HT-G)
+		T2error, Err_vec = CCDutils.get_Err(ham.F,G2,T2,ham.nocc,ham.nvirt)
+		T1error, T1Err_vec = get_singles_Err(ham.F,G1,T1,ham.nocc,ham.nvirt)
+#		error = max(T2error,T1error)
+
+   	#solve HT = G
 		T1 = solveccs(ham.F,G1,T1,ham.nocc,ham.nvirt,x=1.0)
 		T2 = CCDutils.solveccd(ham.F,G2,T2,ham.nocc,ham.nvirt,x=1.0)
 
+	#Get convergence error
+		T2error = np.amax(T2-T2s[-1,:,:,:,:])
+		T1error = np.amax(T1-T1s[-1,:,:])
+		error = max(T2error,T1error)
+
    	#get energies
 		E1 = GCCSEn(ham.F,ham.Eri,T1,ham.nocc)
-#		E1 = 0.0e0
 		E2 = CCDutils.GCCDEn(ham.Eri,T2,ham.nocc)
 		ecorr = E1 + E2
-#		error = np.abs(ecorr-eold)
+#		error = abs(ecorr-eold)
 		print("Iteration = ", niter, " ECorr = ", ecorr, "error = ", error)
 		eold = ecorr 
 		niter += 1  

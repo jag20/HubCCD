@@ -2,6 +2,7 @@ import sys
 sys.path.append('../')
 import numpy as np
 import CCSD
+import CCD
 import ham
 
 #This script does UCCSD on a small doped hubbard lattice.

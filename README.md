@@ -6,6 +6,9 @@ The SCF and Post-SCF routines can be used for general Hamiltonians, but the code
 how to generate integrals for 1D and 2D Hubbard lattices with nearest-neighbor interactions
 and open or periodic boundary conditions.
 
+We have also implemented spin-orbital CCSD based on the factorized equations from Stanton et al. JCP 94(6), 1991. This code is substantially faster
+than the for-development parameterized CCD code.
+
 Required Packages: numpy, os, pickle. If molecular calculations are desired, we also need Gaussian16 and their Fortran/python
 routines for accessing Gaussian matrix element files: http://gaussian.com/interfacing/
 

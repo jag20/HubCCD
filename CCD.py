@@ -43,6 +43,9 @@ def ccd(ham,ampfile="none",variant="ccd"):
     
     niter += 1
 
+	#Get convergence error
+    error = np.amax(T-Ts[-1,:,:,:,:])
+
     print("Energy = ", ecorr, "error = ", error)
     ham.ecorr = ecorr
     ham.T = T
