@@ -109,6 +109,7 @@ def CCSDsingles_fact(F,Eri,T2,T1,nocc,nbas):
 
     Fme = F[nocc:,:nocc] + np.einsum('nf,efmn->em',T1,Eri[nocc:,nocc:,:nocc,:nocc])
 
+    #contract T with intermediates to get RHS of singles equation. (eq 1 in Stanton reference)
     G = F[:nocc,nocc:] + np.einsum('ie,ea->ia',T1,Fae)
     G -= np.einsum('ma,im->ia',T1,Fmi)
     G += np.einsum('imae,em->ia',T2,Fme)
@@ -116,6 +117,56 @@ def CCSDsingles_fact(F,Eri,T2,T1,nocc,nbas):
     G -= 0.5e0*np.einsum('imef,efma->ia',T2,Eri[nocc:,nocc:,:nocc,nocc:])
     G -= 0.5e0*np.einsum('mnae,einm->ia',T2,Eri[nocc:,:nocc,:nocc,:nocc])
     return G
+
+def CCSDdoubles_fact(F,Eri,T2,T1,nocc,nbas):
+    #build intermediates according to Stanton et al. JCP 94(6) 1991
+    F_diag = np.diag(np.diag(F))
+    Tau_tilde = T2 + 0.50e0*(np.einsum('ia,jb->ijab',T1,T1)-np.einsum('ib,ja->ijab',T1,T1))
+    Tau  = T2 + np.einsum('ia,jb->ijab',T1,T1) - np.einsum('ib,ja->ijab',T1,T1)
+    #2-index intermediates
+    Fae = F[nocc:,nocc:] - F_diag[nocc:,nocc:] 
+    Fae -= 0.5e0*(np.einsum('em,ma->ea',F[nocc:,:nocc],T1))
+    Fae += np.einsum('mf,fema->ea',T1,Eri[nocc:,nocc:,:nocc,nocc:])
+    Fae -= 0.5e0*np.einsum('mnaf,efmn->ea',Tau_tilde,Eri[nocc:,nocc:,:nocc,:nocc])
+
+    Fmi = F[:nocc,:nocc] - F_diag[:nocc,:nocc] 
+    Fmi += 0.5e0*(np.einsum('em,ie->im',F[nocc:,:nocc],T1))
+    Fmi += np.einsum('ne,iemn->im',T1,Eri[:nocc,nocc:,:nocc,:nocc])
+    Fmi += 0.5e0*np.einsum('inef,efmn->im',Tau_tilde,Eri[nocc:,nocc:,:nocc,:nocc])
+
+    Fme = F[nocc:,:nocc] + np.einsum('nf,efmn->em',T1,Eri[nocc:,nocc:,:nocc,:nocc])
+    #4-index intermediates
+    Wijmn = Eri[:nocc,:nocc,:nocc,:nocc] + np.einsum('je,iemn->ijmn',T1,Eri[:nocc,nocc:,:nocc,:nocc])
+    Wijmn -= np.einsum('ie,jemn->ijmn',T1,Eri[:nocc,nocc:,:nocc,:nocc])
+    Wijmn += 0.25e0*np.einsum('ijef,efmn->ijmn',Tau,Eri[nocc:,nocc:,:nocc,:nocc])
+
+    Wefab = Eri[nocc:,nocc:,nocc:,nocc:] - np.einsum('mb,efam->efab',T1,Eri[nocc:,nocc:,nocc:,:nocc])
+    Wefab += np.einsum('ma,efbm->efab',T1,Eri[nocc:,nocc:,nocc:,:nocc])
+    Wefab += 0.25e0*np.einsum('mnab,efmn->efab',Tau,Eri[nocc:,nocc:,:nocc,:nocc])
+
+    Wejmb = Eri[nocc:,:nocc,:nocc,nocc:] + np.einsum('jf,efmb->ejmb',T1,Eri[nocc:,nocc:,:nocc,nocc:])
+    Wejmb -= np.einsum('nb,ejmn->ejmb',T1,Eri[nocc:,:nocc,:nocc,:nocc])
+    tau1 = np.einsum('jf,nb->jnfb',T1,T1)
+    Wejmb -= np.einsum('jnfb,efmn->ejmb',(0.5e0*T2+tau1),Eri[nocc:,nocc:,:nocc,:nocc])
+    #contract T with intermediates to get RHS of singles equation. (eq 2 in Stanton reference)
+    
+    G = Eri[:nocc,:nocc,nocc:,nocc:] + np.einsum('ijae,eb->ijab',T2,Fae) - 0.5e0*np.einsum('ijae,mb,em->ijab',T2,T1,Fme)
+    G -= (np.einsum('ijbe,ea->ijab',T2,Fae) - 0.5e0*np.einsum('ijbe,ma,em->ijab',T2,T1,Fme))
+    G -= (np.einsum('imab,jm->ijab',T2,Fmi) + 0.5e0*np.einsum('imab,je,em->ijab',T2,T1,Fme))
+    G += (np.einsum('jmab,im->ijab',T2,Fmi) + 0.5e0*np.einsum('jmab,ie,em->ijab',T2,T1,Fme))
+    G += 0.5e0*(np.einsum('mnab,ijmn->ijab',Tau,Wijmn) + np.einsum('ijef,efab->ijab',Tau,Wefab))
+    G += (np.einsum('imae,ejmb->ijab',T2,Wejmb) - np.einsum('ie,ma,ejmb->ijab',T1,T1,Eri[nocc:,:nocc,:nocc,nocc:]))
+    G -= (np.einsum('jmae,eimb->ijab',T2,Wejmb) - np.einsum('je,ma,eimb->ijab',T1,T1,Eri[nocc:,:nocc,:nocc,nocc:]))
+    G -= (np.einsum('imbe,ejma->ijab',T2,Wejmb) - np.einsum('ie,mb,ejma->ijab',T1,T1,Eri[nocc:,:nocc,:nocc,nocc:]))
+    G += (np.einsum('jmbe,eima->ijab',T2,Wejmb) - np.einsum('je,mb,eima->ijab',T1,T1,Eri[nocc:,:nocc,:nocc,nocc:]))
+    G += np.einsum('ie,ejab->ijab',T1,Eri[nocc:,:nocc,nocc:,nocc:])  
+    G -= np.einsum('je,eiab->ijab',T1,Eri[nocc:,:nocc,nocc:,nocc:])  
+    G -= np.einsum('ma,ijmb->ijab',T1,Eri[:nocc,:nocc,:nocc,nocc:])  
+    G += np.einsum('mb,ijma->ijab',T1,Eri[:nocc,:nocc,:nocc,nocc:])  
+
+
+    return G
+
 
 
 

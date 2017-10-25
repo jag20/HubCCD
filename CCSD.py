@@ -42,8 +42,9 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 #		T2, Errors, T2s = CCDutils.diis(diis_start,diis_dim,niter,Errors,T2s,T2,Err_vec)
    	#build RHS
 #		G1 = CCSDsingles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
+#            G2 = CCSDdoubles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas,variant)
             G1 = CCSDsingles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
-            G2 = CCSDdoubles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas,variant)
+            G2 = CCSDdoubles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
 		#Get error
             error, Err_vec = CCDutils.get_Err(ham.F,G2,T2,ham.nocc,ham.nvirt)
 

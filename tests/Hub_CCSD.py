@@ -13,11 +13,11 @@ with open(flnm, "w") as f:
    U = 2.0
    print("U = ", U)
    #Build hamiltonian and do RHF
-   hub = ham.hub(nsitesx=4,nsitesy=2,U=U,fill=3.0/8.0,PeriodicX=False)
+   hub = ham.hub(nsitesx=4,nsitesy=2,U=U,fill=3./8.,PeriodicX=False)
    hub.get_ints(wfn_type="uhf")
    #Do attenuated CCSD
    CCSD.ccsd(hub)
-   print("ESCCD = ", hub.ecorr, "escf = ", hub.escf)
+   print("ECCSD = ", hub.ecorr, "escf = ", hub.escf)
    f.write(str(U) + "   " + str(hub.ecorr) + "  "+ str(hub.escf) + "\n")
  
 
