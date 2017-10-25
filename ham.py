@@ -16,7 +16,8 @@ class ham():
 class hub(ham):
 
   def __init__(self,U=1,t=1,nsitesx=6,nsitesy=1,fill=0.5,PeriodicX=True,PeriodicY=False):
-    super(hub, self).__init__()
+#    super(hub, self).__init__()
+    ham.__init__(self)
     self.hamtype = "Hubbard"
     self.nbas = nsitesx*nsitesy
     self.nsitesx = nsitesx
@@ -108,7 +109,7 @@ class mol(ham):
 
   def __init__(self,wfn_type,fname):
     from readints import read_ints 
-    super(mol, self).__init__()
+    hub.__init__(self)
     self.hamtype = "Molecule"
     self.wfn_type = wfn_type.lower()
     #We can only do molecular calculations if we read integrals from a Gaussian16 Matrix Element File for now.
