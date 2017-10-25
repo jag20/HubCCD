@@ -99,7 +99,7 @@ def CCSDsingles_fact(F,Eri,T2,T1,nocc,nbas):
     Tau_tilde = T2 + 0.50e0*(np.einsum('ia,jb->ijab',T1,T1)-np.einsum('ib,ja->ijab',T1,T1))
     Fae = F[nocc:,nocc:] - F_diag[nocc:,nocc:] 
     Fae -= 0.5e0*(np.einsum('em,ma->ea',F[nocc:,:nocc],T1))
-    Fae += np.einsum('mf,fema->ea',T1,Eri[:nocc,nocc:,:nocc,nocc:])
+    Fae += np.einsum('mf,fema->ea',T1,Eri[nocc:,nocc:,:nocc,nocc:])
     Fae -= 0.5e0*np.einsum('mnaf,efmn->ea',Tau_tilde,Eri[nocc:,nocc:,:nocc,:nocc])
 
     Fmi = F[:nocc,:nocc] - F_diag[:nocc,:nocc] 
@@ -107,13 +107,13 @@ def CCSDsingles_fact(F,Eri,T2,T1,nocc,nbas):
     Fmi += np.einsum('ne,iemn->im',T1,Eri[:nocc,nocc:,:nocc,:nocc])
     Fmi += 0.5e0*np.einsum('inef,efmn->im',Tau_tilde,Eri[nocc:,nocc:,:nocc,:nocc])
 
-    Fme = F[nocc:,:nocc] + np.einsum('nf,efmn->em',T1,Eri[nocc:,nocc:,:nocc,:nocc]
+    Fme = F[nocc:,:nocc] + np.einsum('nf,efmn->em',T1,Eri[nocc:,nocc:,:nocc,:nocc])
 
-    G = F[nocc:,:nocc] + np.einsum('ie,ea->ia',T1,Fae)
+    G = F[:nocc,nocc:] + np.einsum('ie,ea->ia',T1,Fae)
     G -= np.einsum('ma,im->ia',T1,Fmi)
     G += np.einsum('imae,em->ia',T2,Fme)
     G -= np.einsum('nf,ifna->ia',T1,Eri[:nocc,nocc:,:nocc,nocc:])
-    G -= 0.5e0*np.einsum('imef,efma->ia',T2,Eri[nocc:,:nocc,:nocc,nocc:])
+    G -= 0.5e0*np.einsum('imef,efma->ia',T2,Eri[nocc:,nocc:,:nocc,nocc:])
     G -= 0.5e0*np.einsum('mnae,einm->ia',T2,Eri[nocc:,:nocc,:nocc,:nocc])
     return G
 

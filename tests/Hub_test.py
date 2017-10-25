@@ -1,8 +1,8 @@
 import sys
 sys.path.append('../')
-import ham 
 import numpy as np
 import CCD
+import ham
 
 #This script demonstrates the use of the CCD and CCDutils modules
 #to run attenuated Coupled Cluster(Gomez, Henderson and Scuseria, Mol. Phys. online 23 Mar 2017)

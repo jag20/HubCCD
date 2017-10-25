@@ -39,27 +39,27 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 
 	print("Beginning CCSD iteration")
 	while (error > tol):
-		T2, Errors, T2s = CCDutils.diis(diis_start,diis_dim,niter,Errors,T2s,T2,Err_vec)
+#		T2, Errors, T2s = CCDutils.diis(diis_start,diis_dim,niter,Errors,T2s,T2,Err_vec)
    	#build RHS
-		G1 = CCSDsingles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
-
-		G2 = CCSDdoubles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas,variant)
+#		G1 = CCSDsingles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
+            G1 = CCSDsingles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
+            G2 = CCSDdoubles(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas,variant)
 		#Get error
-		error, Err_vec = CCDutils.get_Err(ham.F,G2,T2,ham.nocc,ham.nvirt)
+            error, Err_vec = CCDutils.get_Err(ham.F,G2,T2,ham.nocc,ham.nvirt)
 
    	#solve H
-		T1 = solveccs(ham.F,G1,T1,ham.nocc,ham.nvirt,x=1.0)
-		T2 = CCDutils.solveccd(ham.F,G2,T2,ham.nocc,ham.nvirt,x=4.0)
+            T1 = solveccs(ham.F,G1,T1,ham.nocc,ham.nvirt,x=1.0)
+            T2 = CCDutils.solveccd(ham.F,G2,T2,ham.nocc,ham.nvirt,x=1.0)
 
    	#get energies
-		E1 = GCCSEn(ham.F,ham.Eri,T1,ham.nocc)
+            E1 = GCCSEn(ham.F,ham.Eri,T1,ham.nocc)
 #		E1 = 0.0e0
-		E2 = CCDutils.GCCDEn(ham.Eri,T2,ham.nocc)
-		ecorr = E1 + E2
+            E2 = CCDutils.GCCDEn(ham.Eri,T2,ham.nocc)
+            ecorr = E1 + E2
 #		error = np.abs(ecorr-eold)
-		print("Energy = ", ecorr, "error = ", error)
-		eold = ecorr 
-		niter += 1  
+            print("Energy = ", ecorr, "error = ", error)
+            eold = ecorr 
+            niter += 1  
 
 
 	if ((ampfile != 'none')):
