@@ -112,3 +112,59 @@ def GCCSEn(F,Eri,T1,nocc):
 	eccs += np.einsum('ai,ia',F[nocc:,:nocc],T1)
 	return eccs
 
+#DIIS for singles
+def diis_singles_setup(nocc,nvirt,diis_start,diis_dim):
+  #use direct inversion of the iterative subspace (Pulay Chem Phys Lett 73(390), 1980) to extrapolate CC amplitudes.
+  #This function sets up the various arrays we need for the extrapolation.
+  Errors  = np.zeros([diis_dim,nocc,nvirt])
+  Ts      = np.zeros([diis_dim,nocc,nvirt])
+  Err_vec = np.zeros([nocc,nvirt])
+  return Errors, Ts, Err_vec
+
+def get_singles_Err(F,G,T,nocc,nvirt):
+  #Calculate the residual for the CC equations at a given value of T amplitudes
+  Err_vec = np.zeros((nocc,nvirt))
+  for i in range(nocc):
+      for a in range(nvirt):
+        aa = a + nocc
+        Err_vec[i,a] = G[i,a]-(F[i,i] - F[aa,aa] )*T[i,a]
+  error = np.amax(np.absolute(Err_vec))
+  return error, Err_vec
+
+def diis_singles(diis_start,diis_dim,iteration,Errors,Ts,Told,Err_vec):
+  #use direct inversion of the iterative subspace (Pulay Chem Phys Lett 73(390), 1980) to accelerate convergence.
+  #This function performs the actual extrapolation
+
+  if (iteration > (diis_start + diis_dim)):
+    #extrapolate the amplitudes if we're sufficiently far into the CC iterations
+
+    #update error and amplitudes for next DIIS cycle. We DON'T want to store the extrapolated amplitudes in self.Ts
+    Errors = np.roll(Errors,-1,axis=0)
+    Errors[-1,:,:] = Err_vec
+    Ts = np.roll(Ts,-1,axis=0)
+    Ts [-1,:,:] = Told
+
+    #solve the DIIS  Bc = l linear equation
+    B = np.zeros((diis_dim+1,diis_dim+1))
+    B[:,-1] = -1
+    B[-1,:] = -1
+    B[-1,-1] = 0
+    B[:-1,:-1] = np.einsum('ika,jka->ij',Errors,Errors)
+    l =  np.zeros(diis_dim+1)
+    l[-1] = -1
+    c = np.linalg.solve(B,l)
+
+    T = np.einsum('q,qia->ia',c[:-1], Ts)
+    
+
+  elif (iteration > (diis_start)):
+    #Fill the diis arrays until we have gone enough cycles to extrapolate
+    count = iteration - diis_start - 1
+    Errors[count,:,:] = Err_vec
+    Ts[count:,:] = Told
+    T = np.copy(Told)
+
+  else:
+    T = np.copy(Told)
+
+  return T, Errors, Ts
