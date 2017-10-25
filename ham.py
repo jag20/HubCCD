@@ -1,6 +1,6 @@
 import numpy as np
 from scf import *
-from readints import read_ints 
+#from readints import read_ints 
 #This module builds the Hamiltonian object needed for post-Hartree-Fock methods (i.e. MO-basis integrals). 
 #Current support is restricted to molecules (which require input of external integral file, RHF only for now) and
 #1D and 2D Hubbard with nearest-neighbor interaction (open or periodic boundary conditions).
@@ -107,6 +107,7 @@ class hub(ham):
 class mol(ham):
 
   def __init__(self,wfn_type,fname):
+    from readints import read_ints 
     super(mol, self).__init__()
     self.hamtype = "Molecule"
     self.wfn_type = wfn_type.lower()
