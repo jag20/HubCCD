@@ -29,7 +29,7 @@ class hub(ham):
     self.PeriodicY = PeriodicY
 
 
-  def get_ints(self,wfn_type="rhf",denfile="none"):
+  def get_ints(self,wfn_type="rhf",denfile="none",guess="af"):
    #Do AO integrals and RHF by default
    self.wfn_type = wfn_type.lower()
 #   print(self.wfn_type)
@@ -97,7 +97,7 @@ class hub(ham):
    elif (wfn_type == "uhf"):
    #Do UHF and transform to MO basis for Post-HF calculation. Note we only have support for spin-orbital coupled cluster at this point. 
    #We could do true GHF-CCD, but do not have support for finding actual Sz-broken GHF solutions right now.
-     F_a, F_b, C_a, C_b = UHF(self,denfile)
+     F_a, F_b, C_a, C_b = UHF(self,denfile,guess)
      F_GHF, Eri_GHF, C_GHF = ao_to_GHF(C_a,C_b,F_a,F_b,self.Eri,self.nocc,self.nocc,self.nbas)
      self.F, self.Eri, self.C = np.copy(F_GHF), np.copy(Eri_GHF), np.copy(C_GHF)
      self.nbas = 2*self.nbas

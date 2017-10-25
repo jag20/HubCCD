@@ -36,8 +36,10 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	G1 = CCSDsingles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
 	G2 = CCSDdoubles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
 	niter = 1
-	tol = 1.0e-9
+	tol = 1.0e-7
 	error = tol*50
+	damping= 2
+
 
 	print("Beginning CCSD iteration")
 	while (error > tol):
@@ -53,19 +55,19 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 #		error = max(T2error,T1error)
 
    	#solve HT = G
-		T1 = solveccs(ham.F,G1,T1,ham.nocc,ham.nvirt,x=1.0)
-		T2 = CCDutils.solveccd(ham.F,G2,T2,ham.nocc,ham.nvirt,x=1.0)
+		T1 = solveccs(ham.F,G1,T1,ham.nocc,ham.nvirt,x=damping)
+		T2 = CCDutils.solveccd(ham.F,G2,T2,ham.nocc,ham.nvirt,x=damping)
 
 	#Get convergence error
-		T2error = np.amax(T2-T2s[-1,:,:,:,:])
-		T1error = np.amax(T1-T1s[-1,:,:])
-		error = max(T2error,T1error)
+#		T2error = np.amax(T2-T2s[-1,:,:,:,:])
+#		T1error = np.amax(T1-T1s[-1,:,:])
+#		error = max(T2error,T1error)
 
    	#get energies
 		E1 = GCCSEn(ham.F,ham.Eri,T1,ham.nocc)
 		E2 = CCDutils.GCCDEn(ham.Eri,T2,ham.nocc)
 		ecorr = E1 + E2
-#		error = abs(ecorr-eold)
+		error = abs(ecorr-eold)
 		print("Iteration = ", niter, " ECorr = ", ecorr, "error = ", error)
 		eold = ecorr 
 		niter += 1  
@@ -77,5 +79,7 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 			pickle.dump(T1,f)
 
 	ham.ecorr = ecorr
+	ham.T2 = np.copy(T2)
+	ham.T1 = np.copy(T1)
 	
 	

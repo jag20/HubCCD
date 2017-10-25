@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import pickle 
+from anaden import *
 #This module implements RHF and UHF for arbitrary Hamiltonians. We only need AO-basis 1 and 2-electron integrals, although the code
 #does assume the basis is orthonormal. These algorithms are taken exactly from Szabo and Ostlund, Modern Quantum Chemistry.
 
@@ -27,35 +28,123 @@ def RHF(ham,denfile):
     niter += 1
 
 
-def UHF(ham,denfile):
+def UHF(ham,denfile="none",guess="af"):
   #Do UHF. Anti-ferromagnetic guess used here is only useful for Hubbard, but the UHF algorithm itself 
   #as implemented here can be used
   #for arbitrary Hamiltonians.
 
+
+  #Add a check for Fortran-ordered, text-based alpha and beta MO coefficients 
+  #to interface with Ethan's code
+  fla="cA"
+  flb="cB"
+  if ( os.path.isfile(fla) and os.path.isfile(flb)):
+    print("Using UpCCD basis")
+    with open(fla, 'r') as f:
+      C_a = []
+      stuff = f.readlines()
+      for line in stuff:
+        for item in line.split():
+#          print("%.16f" %float(item))
+          C_a = np.append(C_a,float(item))
+
+    with open(flb, 'r') as f:
+      C_b = []
+      stuff = f.readlines()
+      for line in stuff:
+        for item in line.split():
+#          print("%.16f" %float(item))
+          C_b = np.append(C_b,float(item))
+
+    C_a = C_a.reshape((ham.nbas,ham.nbas),order = 'F')
+    C_b = C_b.reshape((ham.nbas,ham.nbas),order = 'F')
+    P_a = (buildP(C_a,ham.nocc))
+    P_b = (buildP(C_b,ham.nocc))
+    F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
+    ham.escf = calc_euhf(P_a,P_b,F_a,F_b,ham.OneH)
+    ham.Pa = np.copy(P_a)
+    ham.Pb = np.copy(P_b)
+
+    return F_a, F_b, C_a, C_b
+
+
   #Read density matrix from file if we have it
   if ((denfile.lower() != "none") and os.path.isfile(denfile)):
+    print("Reading previous density matrix")
     with open(denfile, 'rb') as f:
       P_a = pickle.load(f)
       P_b = pickle.load(f)
   #Otherwise, guess density matrix.
   #Break S^2 symmetry using an antiferromagnetic guess.
-  #Make nsitesy copies of a nsitesx-dimensional 1-D lattice.
+  #Make nsitesy copies of an nsitesx-dimensional 1-D lattice.
   else:
-      nmax = int(ham.nocc/ham.nsitesy) + 1
-      xlat = np.zeros(ham.nsitesx)
-      for n in range(0,nmax,2):
-          xlat[n] = 1
-      diag_a = []
-      diag_b = []
-      for i in range(ham.nsitesy):
-        if i%2 == 0:
-            diag_a = np.append(diag_a,xlat)
-            diag_b = np.append(diag_b,xlat[::-1])
-        else:
-            diag_a = np.append(diag_a,xlat[::-1])
-            diag_b = np.append(diag_b,xlat)
-      P_a = np.diag(diag_a)
-      P_b = np.diag(diag_b)
+      guess = guess.lower()
+      if (guess == "af"):
+        print("Antiferromagnetic guess for UHF")
+#        nmax = int(ham.nocc/ham.nsitesy) + 1
+        nmax = ham.nsitesx
+        den  = 2*ham.nocc/(ham.nsitesx*ham.nsitesy)
+        print("den = ", den)
+        xlat = np.zeros(ham.nsitesx)
+        for n in range(0,nmax,2):
+#            xlat[n] = 1
+            xlat[n] = den
+        diag_a = []
+        diag_b = []
+        for i in range(ham.nsitesy):
+          if i%2 == 0:
+              diag_a = np.append(diag_a,xlat)
+              diag_b = np.append(diag_b,xlat[::-1])
+          else:
+              diag_a = np.append(diag_a,xlat[::-1])
+              diag_b = np.append(diag_b,xlat)
+        P_a = np.diag(diag_a)
+        P_b = np.diag(diag_b)
+#        print(P_a)
+#        print(P_b)
+
+#        plt_spin_den(P_a,P_b,ham.nsitesx,ham.nsitesy)
+      elif (guess == "sdw"):
+        print("Spin-density wave guess for UHF")
+        nmax = ham.nsitesx
+        den  = 2*ham.nocc/(ham.nsitesx*ham.nsitesy)
+        print("den = ", den)
+        zeros = np.zeros(ham.nsitesx)
+        xlat = np.ones(ham.nsitesx)*den
+        diag_a = []
+        diag_b = []
+        for i in range(ham.nsitesy):
+          if i%2 == 0:
+              diag_a = np.append(diag_a,xlat)
+              diag_b = np.append(diag_b,zeros)
+          else:
+              diag_b = np.append(diag_b,xlat)
+              diag_a = np.append(diag_a,zeros)
+        P_a = np.diag(diag_a)
+        P_b = np.diag(diag_b)
+        print(P_a)
+        print(P_b)
+#        F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
+#        e, C_a = np.linalg.eigh(F_a)
+#        idx = e.argsort()
+#        e = e[idx]
+#        C_a = C_a[:,idx]
+#        e, C_b = np.linalg.eigh(F_b)
+#        idx = e.argsort()
+#        e = e[idx]
+#        C_b = C_b[:,idx]
+#        P_a = (buildP(C_a,ham.nocc))
+#        P_b = (buildP(C_b,ham.nocc))
+#        F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
+#        ham.Pa = np.copy(P_a)
+#        ham.Pb = np.copy(P_b)
+#        escf = calc_euhf(P_a,P_b,F_a,F_b,ham.OneH)
+#        ham.escf = escf
+#
+#        return F_a, F_b, C_a, C_b
+#        stop
+
+#        plt_spin_den(P_a,P_b,ham.nsitesx,ham.nsitesy)
 
   F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
   #Set some values and do the UHF iteration
@@ -90,7 +179,9 @@ def UHF(ham,denfile):
       with open(denfile, "wb") as f:
         pickle.dump(P_a, f)
         pickle.dump(P_b, f)
-  
+
+  ham.Pa = np.copy(P_a)
+  ham.Pb = np.copy(P_b)
   return F_a, F_b, C_a, C_b
 
 

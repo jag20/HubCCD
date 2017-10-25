@@ -48,7 +48,7 @@ def ccd(ham,ampfile="none",variant="ccd"):
 
     print("Energy = ", ecorr, "error = ", error)
     ham.ecorr = ecorr
-    ham.T = T
+    ham.T2 = T
 
   
 
