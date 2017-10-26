@@ -208,7 +208,8 @@ def ao_to_GHF(C_a,C_b,F_a,F_b,Eriao,nocca,noccb,nbas):
   Eri[:nbas,:nbas,nbas:,nbas:] = Eriao
   Eri[nbas:,nbas:,:nbas,:nbas] = Eriao
   Eri[nbas:,nbas:,nbas:,nbas:] = Eriao
-  Eri = twoe_MO_tran(Eri,C,C)
+#  Eri = twoe_MO_tran(Eri,C,C)
+  Eri = twoe_MO_tran_GHF(Eri,C,C,nocca,noccb,nbas)
   Eri = Eri - np.swapaxes(Eri,2,3)  #antisymmetrize
 
   return F, Eri, C
@@ -277,5 +278,43 @@ def twoe_MO_tran(Eri,C_1,C_2):
   Eri       = np.einsum('ur,pqus->pqrs',C_1,Eri_temp)
   Eri_temp  = np.einsum('uq,purs->pqrs',C_2,Eri)
   Eri       = np.einsum('up,uqrs->pqrs',C_1,Eri_temp)
+  Eri = np.swapaxes(Eri,1,2) #Convert to Dirac ordering 
+  return Eri
+
+def twoe_MO_tran_GHF(Eri,C_1,C_2,nocca,noccb,nbas):
+  #Transform one- and two-electron integrals to MO basis. The transformation of the 4-index array can be worked out by writing the 
+  #basis transformation of a normal 2-D matrix as sums over the matrix elements. Input array assumed to be mulliken ordering (pq|rs).
+  #Output integrals are in Dirac ordering <pr|qs>
+  import time
+  print("in new GHF tran function")
+  nvirta = nbas-nocca
+  nvirtb = nbas-noccb
+  in1 = nocca
+  in2 = in1 + nocca
+  in3 = in2 + nvirta
+#  Eri_temp  = np.einsum('us,pqru->pqrs',C_2,Eri)
+#  Eri       = np.einsum('ur,pqus->pqrs',C_1,Eri_temp)
+#  Eri_temp  = np.einsum('uq,purs->pqrs',C_2,Eri)
+#  Eri       = np.einsum('up,uqrs->pqrs',C_1,Eri_temp)
+  temp_1   = np.einsum('us,pqru->pqrs',C_2[:nbas,:in1],Eri[:,:,:,:nbas])
+  temp_2   = np.append(temp_1,np.einsum('us,pqru->pqrs',C_2[nbas:,in1:in2],Eri[:,:,:,nbas:]),axis=3)
+  temp_3   = np.append(temp_2,np.einsum('us,pqru->pqrs',C_2[:nbas,in2:in3],Eri[:,:,:,:nbas]),axis=3)
+  Eri_temp = np.append(temp_3,np.einsum('us,pqru->pqrs',C_2[nbas:,in3:],Eri[:,:,:,nbas:]),axis=3)
+
+  temp_1 =                  np.einsum('ur,pqus->pqrs',C_1[:nbas,:in1],   Eri_temp[:,:,:nbas,:])
+  temp_2 = np.append(temp_1,np.einsum('ur,pqus->pqrs',C_1[nbas:,in1:in2],Eri_temp[:,:,nbas:,:]),axis=2)
+  temp_3 = np.append(temp_2,np.einsum('ur,pqus->pqrs',C_1[:nbas,in2:in3],Eri_temp[:,:,:nbas,:]),axis=2)
+  Eri    = np.append(temp_3,np.einsum('ur,pqus->pqrs',C_1[nbas:,in3:],   Eri_temp[:,:,nbas:,:]),axis=2)
+
+  temp_1   = np.einsum('uq,purs->pqrs',C_2[:nbas,:in1],Eri[:,:nbas,:,:])
+  temp_2   = np.append(temp_1,np.einsum('uq,purs->pqrs',C_2[nbas:,in1:in2],Eri[:,nbas:,:,:]),axis=1)
+  temp_3   = np.append(temp_2,np.einsum('uq,purs->pqrs',C_2[:nbas,in2:in3],Eri[:,:nbas,:,:]),axis=1)
+  Eri_temp = np.append(temp_3,np.einsum('uq,purs->pqrs',C_2[nbas:,in3:],   Eri[:,nbas:,:,:]),axis=1)
+
+  temp_1 =                  np.einsum('up,uqrs->pqrs',C_1[:nbas,:in1],   Eri_temp[:nbas,:,:,:])
+  temp_2 = np.append(temp_1,np.einsum('up,uqrs->pqrs',C_1[nbas:,in1:in2],Eri_temp[nbas:,:,:,:]),axis=0)
+  temp_3 = np.append(temp_2,np.einsum('up,uqrs->pqrs',C_1[:nbas,in2:in3],Eri_temp[:nbas,:,:,:]),axis=0)
+  Eri    = np.append(temp_3,np.einsum('up,uqrs->pqrs',C_1[nbas:,in3:],   Eri_temp[nbas:,:,:,:]),axis=0)
+
   Eri = np.swapaxes(Eri,1,2) #Convert to Dirac ordering 
   return Eri
