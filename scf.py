@@ -1,7 +1,7 @@
 import numpy as np
 import os
 import pickle 
-from anaden import *
+#from anaden import *
 #This module implements RHF and UHF for arbitrary Hamiltonians. We only need AO-basis 1 and 2-electron integrals, although the code
 #does assume the basis is orthonormal. These algorithms are taken exactly from Szabo and Ostlund, Modern Quantum Chemistry.
 
