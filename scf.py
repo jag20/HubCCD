@@ -286,7 +286,6 @@ def twoe_MO_tran_GHF(Eri,C_1,C_2,nocca,noccb,nbas):
   #basis transformation of a normal 2-D matrix as sums over the matrix elements. Input array assumed to be mulliken ordering (pq|rs).
   #Output integrals are in Dirac ordering <pr|qs>
   import time
-  print("in new GHF tran function")
   nvirta = nbas-nocca
   nvirtb = nbas-noccb
   in1 = nocca
@@ -296,6 +295,8 @@ def twoe_MO_tran_GHF(Eri,C_1,C_2,nocca,noccb,nbas):
 #  Eri       = np.einsum('ur,pqus->pqrs',C_1,Eri_temp)
 #  Eri_temp  = np.einsum('uq,purs->pqrs',C_2,Eri)
 #  Eri       = np.einsum('up,uqrs->pqrs',C_1,Eri_temp)
+
+  #We can accomplish the transformation more quickly if we use only non-zero blocks of the eigenvectors
   temp_1   = np.einsum('us,pqru->pqrs',C_2[:nbas,:in1],Eri[:,:,:,:nbas])
   temp_2   = np.append(temp_1,np.einsum('us,pqru->pqrs',C_2[nbas:,in1:in2],Eri[:,:,:,nbas:]),axis=3)
   temp_3   = np.append(temp_2,np.einsum('us,pqru->pqrs',C_2[:nbas,in2:in3],Eri[:,:,:,:nbas]),axis=3)
