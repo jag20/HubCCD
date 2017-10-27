@@ -64,7 +64,14 @@ def read_ints(wfn_type,fname):
     F_b = mel.matlist["BETA FOCK MATRIX"].expand().reshape((nrorb,nrorb)).T
     C_b = mel.matlist["BETA MO COEFFICIENTS"].expand().reshape((nrorb,nrorb)).T
     F_b = np.dot(C_b.T,np.dot(F_b,C_b))
-    return nrorb, noa, nob, nva, nvb, eref, C_a, C_b, F_a, F_b, ERI_aa
+    ab2e = np.swapaxes(mel.matlist["BA MO 2E INTEGRALS"].expand().reshape((ldima,nrorb,nrorb,nrorb)).T,0,2)
+    ab2e = np.swapaxes(ab2e,1,3)
+    bb2e = mel.matlist["BB MO 2E INTEGRALS"].expand().reshape((ldima,nrorb,nrorb,nrorb)).T
+    ERI_ab = np.swapaxes(ab2e,1,2)
+    ERI_bb = np.swapaxes(bb2e,1,2)
+#    return nrorb, noa, nob, nva, nvb, eref, C_a, C_b, F_a, F_b, ERI_aa, ERI_ab, ERI_bb
+    return nrorb, noa, nob, nva, nvb, eref, C_a, C_b, F_a, F_b, ERI_aa, ERI_ab, ERI_bb
+#    return nrorb, noa, noa, nva, nva, eref, C_a, C_a, F_a, F_a, ERI_aa, ERI_aa, ERI_aa
   
 #  else:
 #    print("Error reading Gaussian matrix element file")

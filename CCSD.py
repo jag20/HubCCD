@@ -1,8 +1,8 @@
 from CCSDutils import *
 import CCDutils 
-import os
 import pickle
 import CCD
+import os
 from scf import moUHF_to_GHF
 
 def ccsd(ham,ampfile="none",variant="ccd"):
@@ -14,6 +14,14 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 		ham.nocc  *= 2
 		ham.nvirt *= 2
 		ham.wfn_type = 'uhf'
+	#and also if we have read in molecular UHF integrals from gaussian.
+	elif (ham.wfn_type == 'uhf'):
+		if (ham.hamtype == 'Molecule'):
+			print("converting UHF molecular wavefunction to spin-orbital basis")
+			ham.F, ham.Eri, ham.C = moUHF_to_GHF(ham.C_a,ham.C_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.nocca,ham.noccb,ham.nbas)
+			ham.nbas  *= 2
+			ham.nocc  = ham.nocca + ham.noccb
+			ham.nvirt = ham.nvirta + ham.nvirtb
 
 #read amplitudes from file if present to improve convergence
 	if ((ampfile != 'none') and(os.path.isfile(ampfile))):
@@ -36,9 +44,9 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	G1 = CCSDsingles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
 	G2 = CCSDdoubles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
 	niter = 1
-	tol = 1.0e-7
+	tol = 1.0e-8
 	error = tol*50
-	damping= 2
+	damping= 1
 
 
 	print("Beginning CCSD iteration")

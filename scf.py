@@ -209,7 +209,7 @@ def ao_to_GHF(C_a,C_b,F_a,F_b,Eriao,nocca,noccb,nbas):
   Eri[nbas:,nbas:,:nbas,:nbas] = Eriao
   Eri[nbas:,nbas:,nbas:,nbas:] = Eriao
 #  Eri = twoe_MO_tran(Eri,C,C)
-  Eri = twoe_MO_tran_GHF(Eri,C,C,nocca,noccb,nbas)
+  Eri = twoe_MO_tran_UHF_to_GHF(Eri,C,C,nocca,noccb,nbas)
   Eri = Eri - np.swapaxes(Eri,2,3)  #antisymmetrize
 
   return F, Eri, C
@@ -281,7 +281,7 @@ def twoe_MO_tran(Eri,C_1,C_2):
   Eri = np.swapaxes(Eri,1,2) #Convert to Dirac ordering 
   return Eri
 
-def twoe_MO_tran_GHF(Eri,C_1,C_2,nocca,noccb,nbas):
+def twoe_MO_tran_UHF_to_GHF(Eri,C_1,C_2,nocca,noccb,nbas):
   #Transform one- and two-electron integrals to MO basis. The transformation of the 4-index array can be worked out by writing the 
   #basis transformation of a normal 2-D matrix as sums over the matrix elements. Input array assumed to be mulliken ordering (pq|rs).
   #Output integrals are in Dirac ordering <pr|qs>

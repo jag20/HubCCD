@@ -1,5 +1,7 @@
 import numpy as np
+import os 
 from CCDutils import *
+
 #This module actually runs the ccd iteration, calling the necessary functions from CCDutils
 
 def ccd(ham,ampfile="none",variant="ccd"):
