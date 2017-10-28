@@ -14,14 +14,13 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 		ham.nocc  *= 2
 		ham.nvirt *= 2
 		ham.wfn_type = 'uhf'
-	#and also if we have read in molecular UHF integrals from gaussian.
 	elif (ham.wfn_type == 'uhf'):
-		if (ham.hamtype == 'Molecule'):
-			print("converting UHF molecular wavefunction to spin-orbital basis")
-			ham.F, ham.Eri, ham.C = moUHF_to_GHF(ham.C_a,ham.C_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.nocca,ham.noccb,ham.nbas)
-			ham.nbas  *= 2
-			ham.nocc  = ham.nocca + ham.noccb
-			ham.nvirt = ham.nvirta + ham.nvirtb
+#		if (ham.hamtype == 'Molecule'):
+		print("converting UHF molecular wavefunction to spin-orbital basis")
+		ham.F, ham.Eri, ham.C = moUHF_to_GHF(ham.C_a,ham.C_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.nocca,ham.noccb,ham.nbas)
+		ham.nbas  *= 2
+		ham.nocc  = ham.nocca + ham.noccb
+		ham.nvirt = ham.nvirta + ham.nvirtb
 
 #read amplitudes from file if present to improve convergence
 	if ((ampfile != 'none') and(os.path.isfile(ampfile))):

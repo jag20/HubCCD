@@ -96,8 +96,20 @@ class hub(ham):
      self.Eri = twoe_MO_tran(self.Eri,self.C,self.C)
 
    elif (wfn_type == "uhf"):
-   #Do UHF and transform to MO basis for Post-HF calculation. Note we only have support for spin-orbital coupled cluster at this point. 
+   #Do UHF and transform to MO basis for Post-HF calculation. We now have support for spin-summed UCCSD and UCCD coupled cluster. No n   need to transform to spin-orbital basis if just doing UCC.
    #We could do true GHF-CCD, but do not have support for finding actual Sz-broken GHF solutions right now.
+     self.F_a, self.F_b, self.C_a, self.C_b = UHF(self,denfile,guess)
+     self.F_a = onee_MO_tran(self.F_a,self.C_a)
+     self.F_b = onee_MO_tran(self.F_b,self.C_b)
+     self.nocca = self.nocc
+     self.noccb = self.nocc
+     self.nvirta = self.nbas-self.nocca
+     self.nvirtb = self.nbas-self.noccb
+     self.Eri_aa = twoe_MO_tran(self.Eri,self.C_a,self.C_a)
+     self.Eri_ab = twoe_MO_tran(self.Eri,self.C_a,self.C_b)
+     self.Eri_bb = twoe_MO_tran(self.Eri,self.C_b,self.C_b)
+   elif (wfn_type == "ghf"):
+   #Our spin-orbital CCD and CCSD codes could do true GHF-CCD, but do not have support for finding actual Sz-broken GHF solutions 		 right now, so we just convert uhf integrals to spin-orbital basis.
      F_a, F_b, C_a, C_b = UHF(self,denfile,guess)
      F_GHF, Eri_GHF, C_GHF = ao_to_GHF(C_a,C_b,F_a,F_b,self.Eri,self.nocc,self.nocc,self.nbas)
      self.F, self.Eri, self.C = np.copy(F_GHF), np.copy(Eri_GHF), np.copy(C_GHF)

@@ -6,6 +6,19 @@ import pickle
 import CCD
 
 def ccsd(ham,ampfile="none",variant="ccd"):
+	if (ham.wfn_type == 'rhf'):
+		print("converting RHF wavefunction to UHF basis")
+		ham.nocca = ham.nocc
+		ham.noccb = ham.nocc
+		ham.nvirta = ham.nvirt
+		ham.nvirtb = ham.nvirt
+		ham.F_a = np.copy(ham.F)
+		ham.F_b = np.copy(ham.F)
+		ham.Eri_aa = np.copy(ham.Eri)
+		ham.Eri_ab = np.copy(ham.Eri)
+		ham.Eri_bb = np.copy(ham.Eri)
+		ham.Eri_aa = ham.Eri_aa - np.swapaxes(ham.Eri_aa,2,3)  #antisymmetrize
+		ham.Eri_bb = ham.Eri_bb - np.swapaxes(ham.Eri_bb,2,3)  #antisymmetrize
 
 #read amplitudes from file if present to improve convergence
 #	if ((ampfile != 'none') and(os.path.isfile(ampfile))):
