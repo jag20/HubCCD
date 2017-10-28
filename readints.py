@@ -70,6 +70,7 @@ def read_ints(wfn_type,fname):
     ERI_ab = np.swapaxes(ab2e,1,2)
     ERI_bb = np.swapaxes(bb2e,1,2)
 #    return nrorb, noa, nob, nva, nvb, eref, C_a, C_b, F_a, F_b, ERI_aa, ERI_ab, ERI_bb
+    print("nva = ", nva)
     return nrorb, noa, nob, nva, nvb, eref, C_a, C_b, F_a, F_b, ERI_aa, ERI_ab, ERI_bb
 #    return nrorb, noa, noa, nva, nva, eref, C_a, C_a, F_a, F_a, ERI_aa, ERI_aa, ERI_aa
   

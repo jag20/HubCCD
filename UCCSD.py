@@ -41,7 +41,7 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 #	T1Errors, T1s, T1Err_vec = diis_singles_setup(ham.nocc,ham.nvirt,diis_start,diis_dim)
 #	G1_a, G1_b  = getg1(T1_a,T1_b,T2_aa,T2_ab,T2_bb,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca,ham.noccb,ham.nbas)
 #	G2_aa, G2_ab, G2_bb = getccsdg2(T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca+1,ham.noccb+1)
-	G2_aa, G2_ab, G2_bb = getg2(T2_aa,T2_ab,T2_bb,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca,ham.noccb,ham.nocca+1,ham.noccb+1,ham.nbas)
+#	G2_aa, G2_ab, G2_bb = getg2(T2_aa,T2_ab,T2_bb,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca,ham.noccb,ham.nocca+1,ham.noccb+1,ham.nbas)
 #g2aa,g2ab,g2bb = getccsdg2(t2aa,t2ab,t2bb,t1a,t1b,focka,fockb,eriaa,eriab,eribb,va,vb,[oa,ob,nbf])
 
 
@@ -74,11 +74,9 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 ##MP2 
 #		T1_a = solveccs(ham.F_a,ham.F_a,T1_a,ham.nocca,ham.nvirta,x=damping)
 #		T1_b = solveccs(ham.F_b,ham.F_b,T1_b,ham.noccb,ham.nvirtb,x=damping)
-		T2_aa =   CCDutils.solveccd(ham.F_a,G2_aa,T2_aa,ham.nocca,ham.nvirta,x=damping)
-		T2_bb =   CCDutils.solveccd(ham.F_b,G2_ab,T2_bb,ham.noccb,ham.nvirtb,x=damping)
-#		G2ab = np.copy(ham.Eri_ab[ham.nocca:,ham.noccb:,:ham.nocca,:ham.noccb])
-#		T2_ab = UCCSDutils.solveccd(ham.F_a,ham.F_b,G2ab,T2_ab,ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb,x=damping)
+		T2_aa =           CCDutils.solveccd(ham.F_a,G2_aa,T2_aa,ham.nocca,ham.nvirta,x=damping)
 		T2_ab = UCCSDutils.solveccd(ham.F_a,ham.F_b,G2_ab,T2_ab,ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb,x=damping)
+		T2_bb =           CCDutils.solveccd(ham.F_b,G2_bb,T2_bb,ham.noccb,ham.nvirtb,x=damping)
 		print("T2 max")
 		print(np.amax(T2_ab))
   #Damp amplitudes to improve convergence

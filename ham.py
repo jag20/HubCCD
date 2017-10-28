@@ -129,6 +129,10 @@ class mol(ham):
 #      self.Eri_ab = np.copy(self.Eri)
 #      self.Eri_bb = np.copy(self.Eri)
        self.nbas, self.nocca, self.noccb, self.nvirta, self.nvirtb, self.escf, self.C_a, self.C_b, self.F_a, self.F_b, self.Eri_aa, self.Eri_ab, self.Eri_bb = read_ints(self.wfn_type,fname)
+
+       self.Eri_aa = self.Eri_aa - np.swapaxes(self.Eri_aa,2,3)  #antisymmetrize
+       self.Eri_bb = self.Eri_bb - np.swapaxes(self.Eri_bb,2,3)  #antisymmetrize
+       
 #      F_GHF, Eri_GHF, C_GHF = moUHF_to_GHF(C_a,C_b,F_a,F_b,Eri_aa,self.nocca,self.noccb,self.nbas)
 
 #      self.F, self.Eri, self.C = np.copy(F_GHF), np.copy(Eri_GHF), np.copy(C_GHF)
