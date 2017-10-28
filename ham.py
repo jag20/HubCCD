@@ -116,22 +116,11 @@ class mol(ham):
     if (self.wfn_type == 'rhf'):
       self.nbas, self.nocc, self.nvirt, self.escf, self.C, self.F, self.Eri = read_ints(self.wfn_type,fname)
     elif (self.wfn_type == 'uhf'):
-#      self.nbas, self.nocc, self.nvirt, self.escf, self.C, self.F, self.Eri = read_ints('rhf',fname)
-#      self.nocca = self.nocc
-#      self.noccb = self.nocc
-#      self.nvirta = self.nvirt
-#      self.nvirtb = self.nvirt
-#      self.F_a = np.copy(self.F)
-#      self.F_b = np.copy(self.F)
-#      self.C_a = np.copy(self.C)
-#      self.C_b = np.copy(self.C)
-#      self.Eri_aa = np.copy(self.Eri)
-#      self.Eri_ab = np.copy(self.Eri)
-#      self.Eri_bb = np.copy(self.Eri)
        self.nbas, self.nocca, self.noccb, self.nvirta, self.nvirtb, self.escf, self.C_a, self.C_b, self.F_a, self.F_b, self.Eri_aa, self.Eri_ab, self.Eri_bb = read_ints(self.wfn_type,fname)
 
        self.Eri_aa = self.Eri_aa - np.swapaxes(self.Eri_aa,2,3)  #antisymmetrize
        self.Eri_bb = self.Eri_bb - np.swapaxes(self.Eri_bb,2,3)  #antisymmetrize
+#    elif (self.wfn_type == 'ghf'):
        
 #      F_GHF, Eri_GHF, C_GHF = moUHF_to_GHF(C_a,C_b,F_a,F_b,Eri_aa,self.nocca,self.noccb,self.nbas)
 
