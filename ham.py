@@ -97,17 +97,22 @@ class hub(ham):
 
    elif (wfn_type == "uhf"):
    #Do UHF and transform to MO basis for Post-HF calculation. We now have support for spin-summed UCCSD and UCCD coupled cluster. No n   need to transform to spin-orbital basis if just doing UCC.
-   #We could do true GHF-CCD, but do not have support for finding actual Sz-broken GHF solutions right now.
      self.F_a, self.F_b, self.C_a, self.C_b = UHF(self,denfile,guess)
-     self.F_a = onee_MO_tran(self.F_a,self.C_a)
-     self.F_b = onee_MO_tran(self.F_b,self.C_b)
      self.nocca = self.nocc
      self.noccb = self.nocc
-     self.nvirta = self.nbas-self.nocca
-     self.nvirtb = self.nbas-self.noccb
+     self.nvirta = self.nvirt
+     self.nvirtb = self.nvirt
+
+     self.F_a = onee_MO_tran(self.F_a,self.C_a)
+     self.F_b = onee_MO_tran(self.F_b,self.C_b)
      self.Eri_aa = twoe_MO_tran(self.Eri,self.C_a,self.C_a)
      self.Eri_ab = twoe_MO_tran(self.Eri,self.C_a,self.C_b)
      self.Eri_bb = twoe_MO_tran(self.Eri,self.C_b,self.C_b)
+
+	#Do the antisymmetrization inside the CC routines to avoid having to do/undo/redo it depending on combination of scf and cc
+#     self.Eri_aa = self.Eri_aa - np.swapaxes(self.Eri_aa,2,3)  #antisymmetrize
+#     self.Eri_bb = self.Eri_bb - np.swapaxes(self.Eri_bb,2,3)  #antisymmetrize
+#
    elif (wfn_type == "ghf"):
    #Our spin-orbital CCD and CCSD codes could do true GHF-CCD, but do not have support for finding actual Sz-broken GHF solutions 		 right now, so we just convert uhf integrals to spin-orbital basis.
      F_a, F_b, C_a, C_b = UHF(self,denfile,guess)
@@ -129,9 +134,8 @@ class mol(ham):
       self.nbas, self.nocc, self.nvirt, self.escf, self.C, self.F, self.Eri = read_ints(self.wfn_type,fname)
     elif (self.wfn_type == 'uhf'):
        self.nbas, self.nocca, self.noccb, self.nvirta, self.nvirtb, self.escf, self.C_a, self.C_b, self.F_a, self.F_b, self.Eri_aa, self.Eri_ab, self.Eri_bb = read_ints(self.wfn_type,fname)
-
-       self.Eri_aa = self.Eri_aa - np.swapaxes(self.Eri_aa,2,3)  #antisymmetrize
-       self.Eri_bb = self.Eri_bb - np.swapaxes(self.Eri_bb,2,3)  #antisymmetrize
+#       self.Eri_aa = self.Eri_aa - np.swapaxes(self.Eri_aa,2,3)  #antisymmetrize
+#       self.Eri_bb = self.Eri_bb - np.swapaxes(self.Eri_bb,2,3)  #antisymmetrize
 #    elif (self.wfn_type == 'ghf'):
        
 #      F_GHF, Eri_GHF, C_GHF = moUHF_to_GHF(C_a,C_b,F_a,F_b,Eri_aa,self.nocca,self.noccb,self.nbas)

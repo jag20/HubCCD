@@ -19,7 +19,10 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 		ham.Eri_bb = np.copy(ham.Eri)
 		ham.Eri_aa = ham.Eri_aa - np.swapaxes(ham.Eri_aa,2,3)  #antisymmetrize
 		ham.Eri_bb = ham.Eri_bb - np.swapaxes(ham.Eri_bb,2,3)  #antisymmetrize
-
+	elif (ham.wfn_type == 'uhf'):
+		ham.Eri_aa = ham.Eri_aa - np.swapaxes(ham.Eri_aa,2,3)  #antisymmetrize
+		ham.Eri_bb = ham.Eri_bb - np.swapaxes(ham.Eri_bb,2,3)  #antisymmetrize
+   
 #read amplitudes from file if present to improve convergence
 #	if ((ampfile != 'none') and(os.path.isfile(ampfile))):
 #		with open(ampfile, 'rb') as f:
@@ -47,6 +50,10 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	G1_b  = np.zeros([ham.noccb,ham.nvirtb],order='F')
 	eold  = 0.0e0
 	#antisymm
+	print("Test")
+	print(np.amax(ham.Eri_aa))
+	print("Test")
+	print(np.amax(ham.Eri_bb))
 
 	#Set up for CCD iteration and DIIS. interpolate doubles only for now
 #	diis_start, diis_dim, Errors, T2s, Err_vec = CCDutils.diis_setup(ham.nocc,ham.nvirt)

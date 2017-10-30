@@ -217,6 +217,10 @@ def ao_to_GHF(C_a,C_b,F_a,F_b,Eriao,nocca,noccb,nbas):
 def moUHF_to_GHF(C_a,C_b,F_a,F_b,Eri_aa,nocca,noccb,nbas):
   #We already have the MO integrals, but it's easier to get the ordering in the spin-orbital basis correct if we first
   #transform back to the AO basis and then multiply by the spin-orbital basis eigenvectors. 
+
+  #first un-antisymmetrize and go back to mulliken order
+#  Eri_aa = np.swapaxes(Eri_aa,1,2)
+#  Eri_aa = Eri_aa + np.swapaxes(Eri_aa,2,3)
   
   #Eri_aa to ao basis. The transformation also takes them back to back to mulliken order
   Eriao = twoe_MO_tran(Eri_aa,np.linalg.inv(C_a),np.linalg.inv(C_a))
@@ -274,9 +278,10 @@ def twoe_MO_tran(Eri,C_1,C_2):
   #Transform one- and two-electron integrals to MO basis. The transformation of the 4-index array can be worked out by writing the 
   #basis transformation of a normal 2-D matrix as sums over the matrix elements. Input array assumed to be mulliken ordering (pq|rs).
   #Output integrals are in Dirac ordering <pr|qs>
+  print("in MO Tran")
   Eri_temp  = np.einsum('us,pqru->pqrs',C_2,Eri)
-  Eri       = np.einsum('ur,pqus->pqrs',C_1,Eri_temp)
-  Eri_temp  = np.einsum('uq,purs->pqrs',C_2,Eri)
+  Eri       = np.einsum('ur,pqus->pqrs',C_2,Eri_temp)
+  Eri_temp  = np.einsum('uq,purs->pqrs',C_1,Eri)
   Eri       = np.einsum('up,uqrs->pqrs',C_1,Eri_temp)
   Eri = np.swapaxes(Eri,1,2) #Convert to Dirac ordering 
   return Eri
