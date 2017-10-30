@@ -139,9 +139,6 @@
        ! write(*,*) "T1a = ", G1a
        ! write(*,*) "T1b = ", G1b
 
-!At this point, we start using the identified intermediates. Hopefully it will
-!be obvious which terms are which. If not, I apologize. 
-
 
 !Construct Jca 
         Jca = Zero

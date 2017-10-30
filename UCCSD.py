@@ -49,11 +49,6 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	G1_a  = np.zeros([ham.nocca,ham.nvirta],order='F')
 	G1_b  = np.zeros([ham.noccb,ham.nvirtb],order='F')
 	eold  = 0.0e0
-	#antisymm
-	print("Test")
-	print(np.amax(ham.Eri_aa))
-	print("Test")
-	print(np.amax(ham.Eri_bb))
 
 	#Set up for CCD iteration and DIIS. interpolate doubles only for now
 #	diis_start, diis_dim, Errors, T2s, Err_vec = CCDutils.diis_setup(ham.nocc,ham.nvirt)
@@ -76,29 +71,17 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 #		T1, T1Errors, T1s = diis_singles(diis_start,diis_dim,niter,T1Errors,T1s,T1,T1Err_vec)
    	#build RHS G
 		G1_a, G1_b  = getg1(T1_a,T1_b,T2_aa,T2_ab,T2_bb,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb, ham.nocca,ham.noccb,ham.nbas)
-#		G2_aa, G2_ab, G2_bb = getccsdg2(T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca,ham.noccb,ham.nbas)
-
 		G2_aa, G2_ab, G2_bb = getccsdg2(T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca,ham.noccb,ham.nbas)
-#		G2_aa, G2_ab, G2_bb = getg2(T2_aa,T2_ab,T2_bb,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca,ham.noccb,ham.nocca+1,ham.noccb+1,ham.nbas)
 #	#Get error vecs (residuals HT-G)
 #		T1error, T1Err_vec = get_singles_Err(ham.F,G1,T1,ham.nocc,ham.nvirt)
 #		error = max(T2error,T1error)
 
-   	#solve HT = G
+   	#solve HT = G, damping amplitudes to improve convergence
 		T1_a = solveccs(ham.F_a,G1_a,T1_a,ham.nocca,ham.nvirta,x=damping)
 		T1_b = solveccs(ham.F_b,G1_b,T1_b,ham.noccb,ham.nvirtb,x=damping)
-#		T2_aa =   CCDutils.solveccd(ham.F_a,G2_aa,T2_aa,ham.nocca,ham.nvirta,x=damping)
-#		T2_bb =   CCDutils.solveccd(ham.F_b,G2_bb,T2_bb,ham.noccb,ham.nvirtb,x=damping)
-#		T2_ab = UCCSDutils.solveccd(ham.F_a,ham.F_b,G2_ab,T2_ab,ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb,x=damping)
-##MP2 
-#		T1_a = solveccs(ham.F_a,ham.F_a,T1_a,ham.nocca,ham.nvirta,x=damping)
-#		T1_b = solveccs(ham.F_b,ham.F_b,T1_b,ham.noccb,ham.nvirtb,x=damping)
-		T2_aa =           CCDutils.solveccd(ham.F_a,G2_aa,T2_aa,ham.nocca,ham.nvirta,x=damping)
+		T2_aa = CCDutils.solveccd(ham.F_a,G2_aa,T2_aa,ham.nocca,ham.nvirta,x=damping)
 		T2_ab = UCCSDutils.solveccd(ham.F_a,ham.F_b,G2_ab,T2_ab,ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb,x=damping)
-		T2_bb =           CCDutils.solveccd(ham.F_b,G2_bb,T2_bb,ham.noccb,ham.nvirtb,x=damping)
-		print("T2 max")
-		print(np.amax(T2_ab))
-  #Damp amplitudes to improve convergence
+		T2_bb = CCDutils.solveccd(ham.F_b,G2_bb,T2_bb,ham.noccb,ham.nvirtb,x=damping)
 
 	#Get convergence error
 #		T2error = np.amax(T2-T2s[-1,:,:,:,:])
@@ -106,18 +89,13 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 #		error = max(T2error,T1error)
 
    	#get energies
-#		E1 = GCCSEn(ham.F,ham.Eri,T1,ham.nocc)
-		#E2 = CCDutils.GCCDEn(ham.Eri_aa,T2_aa,ham.nocca)
-		ecorr = UCCSDutils.Ecorr(ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.nocca,ham.noccb) #		ecorr = ccsdenergy(T1_a, T1_b, T2_aa, T2_ab, T2_bb, ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_bb,ham.Eri_ab,ham.nocca+1,ham.noccb+1,ham.nbas) 
-
-#		ecorr = E1 + E2
+		ecorr = UCCSDutils.Ecorr(ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.nocca,ham.noccb) 
 		error = abs(ecorr-eold)
 #		error = 0
 		print("Iteration = ", niter, " ECorr = ", ecorr, "error = ", error)
 		eold = ecorr 
 		niter += 1  
 #
-		print("Error = ", error)
 
 #	if ((ampfile != 'none')):
 #		with open(ampfile, 'wb') as f:
@@ -125,7 +103,7 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 #			pickle.dump(T1,f)
 #
 	ham.ecorr = ecorr
-#	ham.T2 = np.copy(T2)
-#	ham.T1 = np.copy(T1)
+	ham.T2 = np.copy(T2)
+	ham.T1 = np.copy(T1)
 	
 	

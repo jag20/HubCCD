@@ -1,15 +1,45 @@
 # HubCCD
-This set of python3 modules implements RHF and several CCD-based post-RHF methods: CCD, AttCCD, ACPQ, Linearized CCD and parameterized CCD, which have been developed by a number of groups.
-Specific references are included in the source. We also have UHF and UHF-based CCD (UCCD). UCCD uses a spin-orbital basis CCD code that could employ a GHF
-reference, but we have not implemented GHF yet.
-The SCF and Post-SCF routines can be used for general Hamiltonians, but the code only knows
-how to generate integrals for 1D and 2D Hubbard lattices with nearest-neighbor interactions
-and open or periodic boundary conditions.
+This set of python3 modules implements Hartree-Fock and several coupled-cluster based post-Hartree-Fock methods developed by a
+number of groups, particularly for strong correlation. References are listed in the source. 
 
-We have also implemented spin-orbital CCSD based on the factorized equations from Stanton et al. JCP 94(6), 1991. This code is substantially faster
-than the for-development parameterized CCD code.
+Methods:
 
-Required Packages: numpy, os, pickle. If molecular calculations are desired, we also need Gaussian16 and their Fortran/python
+Integrals:
+-Integral generation for 1D and 2D Hubbard Hamiltonian with open or periodic boundary conditions with nearest-neighbor interactions.
+-Interfacing with Gaussian16 matrix element files to obtain integrals for molecular calculations.
+If molecular calculations are desired, we also need Gaussian16 and their Fortran/python
+routines for accessing Gaussian matrix element files: http://gaussian.com/interfacing/
+
+Hartree-Fock:
+-Restricted Hartree-Fock (molecules or Hubbard. See scf.py)
+-Unrestricted Hartree-Fock (molecules or Hubbard, but S^2-breaking guesses only available for Hubbard. We typically read converged
+HF solutions for molecules from an external program. See scf.py)
+
+
+Spin-summed RHF-based coupled cluster and variants (See CCD.py and CCDutils.py):
+-Coupled cluster with doubles (CCD)
+-Linearized CCD
+-Attenuated CCD (AttCCD)
+-Approximate coupled pair theory with quadruples (ACPQ)
+-Parametrized CCD
+
+Spin-orbital coupled cluster and variants (See CCSD.py and CCSDutils.py):
+-CCD and CCSD that can use RHF, UHF or GHF reference
+-spin-orbital variants of several of the above methods.
+
+
+Spin-Summed UHF-based coupled cluster and variants (See UCCSD.py, UCCSDG1.f90 and UCCSDG2.f90)
+-UCCSD
+***Note: The tensor contractions are done in the fortran modules UCCSDG1.f90 and UCCSDG2.f90, these must be compiled into
+python modules using f2py:  
+f2py -c -m UCCSDG2 UCCSDG2.py
+f2py -c -m UCCSDG1 UCCSDG1.py
+Or see "Makefile", and compile using the command "make all."
+
+
+
+Required Packages: numpy, os, pickle, f2py.
+If molecular calculations are desired, we also need Gaussian16 and their Fortran/python
 routines for accessing Gaussian matrix element files: http://gaussian.com/interfacing/
 
 # Motivation
