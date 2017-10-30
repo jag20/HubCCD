@@ -208,8 +208,8 @@ def ao_to_GHF(C_a,C_b,F_a,F_b,Eriao,nocca,noccb,nbas):
   Eri[:nbas,:nbas,nbas:,nbas:] = Eriao
   Eri[nbas:,nbas:,:nbas,:nbas] = Eriao
   Eri[nbas:,nbas:,nbas:,nbas:] = Eriao
-  Eri = twoe_MO_tran(Eri,C,C)
-#  Eri = twoe_MO_tran_UHF_to_GHF(Eri,C,C,nocca,noccb,nbas)
+#  Eri = twoe_MO_tran(Eri,C,C)
+  Eri = twoe_MO_tran_UHF_to_GHF(Eri,C,C,nocca,noccb,nbas)
   Eri = Eri - np.swapaxes(Eri,2,3)  #antisymmetrize
 
   return F, Eri, C
@@ -281,8 +281,8 @@ def twoe_MO_tran(Eri,C_1,C_2):
   #Output integrals are in Dirac ordering <pr|qs>
   print("in MO Tran")
   Eri_temp  = np.einsum('us,pqru->pqrs',C_2,Eri)
-  Eri       = np.einsum('ur,pqus->pqrs',C_1,Eri_temp)
-  Eri_temp  = np.einsum('uq,purs->pqrs',C_2,Eri)
+  Eri       = np.einsum('ur,pqus->pqrs',C_2,Eri_temp)
+  Eri_temp  = np.einsum('uq,purs->pqrs',C_1,Eri)
   Eri       = np.einsum('up,uqrs->pqrs',C_1,Eri_temp)
   Eri = np.swapaxes(Eri,1,2) #Convert back to Dirac/Mulliken ordering 
   return Eri
@@ -295,7 +295,7 @@ def twoe_MO_tran_UHF_to_GHF(Eri,C_1,C_2,nocca,noccb,nbas):
   nvirta = nbas-nocca
   nvirtb = nbas-noccb
   in1 = nocca
-  in2 = in1 + nocca
+  in2 = in1 + noccb
   in3 = in2 + nvirta
 #  Eri_temp  = np.einsum('us,pqru->pqrs',C_2,Eri)
 #  Eri       = np.einsum('ur,pqus->pqrs',C_1,Eri_temp)
