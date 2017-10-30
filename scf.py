@@ -208,8 +208,8 @@ def ao_to_GHF(C_a,C_b,F_a,F_b,Eriao,nocca,noccb,nbas):
   Eri[:nbas,:nbas,nbas:,nbas:] = Eriao
   Eri[nbas:,nbas:,:nbas,:nbas] = Eriao
   Eri[nbas:,nbas:,nbas:,nbas:] = Eriao
-#  Eri = twoe_MO_tran(Eri,C,C)
-  Eri = twoe_MO_tran_UHF_to_GHF(Eri,C,C,nocca,noccb,nbas)
+  Eri = twoe_MO_tran(Eri,C,C)
+#  Eri = twoe_MO_tran_UHF_to_GHF(Eri,C,C,nocca,noccb,nbas)
   Eri = Eri - np.swapaxes(Eri,2,3)  #antisymmetrize
 
   return F, Eri, C
@@ -226,6 +226,7 @@ def moUHF_to_GHF(C_a,C_b,F_a,F_b,Eri_aa,nocca,noccb,nbas):
   Eriao = twoe_MO_tran(Eri_aa,np.linalg.inv(C_a),np.linalg.inv(C_a))
   Fa_ao   = onee_MO_tran(F_a,np.linalg.inv(C_a))
   Fb_ao   = onee_MO_tran(F_b,np.linalg.inv(C_b))
+
 
   F, Eri, C = ao_to_GHF(C_a,C_b,Fa_ao,Fb_ao,Eriao,nocca,noccb,nbas)
 
@@ -280,10 +281,10 @@ def twoe_MO_tran(Eri,C_1,C_2):
   #Output integrals are in Dirac ordering <pr|qs>
   print("in MO Tran")
   Eri_temp  = np.einsum('us,pqru->pqrs',C_2,Eri)
-  Eri       = np.einsum('ur,pqus->pqrs',C_2,Eri_temp)
-  Eri_temp  = np.einsum('uq,purs->pqrs',C_1,Eri)
+  Eri       = np.einsum('ur,pqus->pqrs',C_1,Eri_temp)
+  Eri_temp  = np.einsum('uq,purs->pqrs',C_2,Eri)
   Eri       = np.einsum('up,uqrs->pqrs',C_1,Eri_temp)
-  Eri = np.swapaxes(Eri,1,2) #Convert to Dirac ordering 
+  Eri = np.swapaxes(Eri,1,2) #Convert back to Dirac/Mulliken ordering 
   return Eri
 
 def twoe_MO_tran_UHF_to_GHF(Eri,C_1,C_2,nocca,noccb,nbas):
@@ -307,15 +308,15 @@ def twoe_MO_tran_UHF_to_GHF(Eri,C_1,C_2,nocca,noccb,nbas):
   temp_3   = np.append(temp_2,np.einsum('us,pqru->pqrs',C_2[:nbas,in2:in3],Eri[:,:,:,:nbas]),axis=3)
   Eri_temp = np.append(temp_3,np.einsum('us,pqru->pqrs',C_2[nbas:,in3:],Eri[:,:,:,nbas:]),axis=3)
 
-  temp_1 =                  np.einsum('ur,pqus->pqrs',C_1[:nbas,:in1],   Eri_temp[:,:,:nbas,:])
-  temp_2 = np.append(temp_1,np.einsum('ur,pqus->pqrs',C_1[nbas:,in1:in2],Eri_temp[:,:,nbas:,:]),axis=2)
-  temp_3 = np.append(temp_2,np.einsum('ur,pqus->pqrs',C_1[:nbas,in2:in3],Eri_temp[:,:,:nbas,:]),axis=2)
-  Eri    = np.append(temp_3,np.einsum('ur,pqus->pqrs',C_1[nbas:,in3:],   Eri_temp[:,:,nbas:,:]),axis=2)
+  temp_1 =                  np.einsum('ur,pqus->pqrs',C_2[:nbas,:in1],   Eri_temp[:,:,:nbas,:])
+  temp_2 = np.append(temp_1,np.einsum('ur,pqus->pqrs',C_2[nbas:,in1:in2],Eri_temp[:,:,nbas:,:]),axis=2)
+  temp_3 = np.append(temp_2,np.einsum('ur,pqus->pqrs',C_2[:nbas,in2:in3],Eri_temp[:,:,:nbas,:]),axis=2)
+  Eri    = np.append(temp_3,np.einsum('ur,pqus->pqrs',C_2[nbas:,in3:],   Eri_temp[:,:,nbas:,:]),axis=2)
 
-  temp_1   = np.einsum('uq,purs->pqrs',C_2[:nbas,:in1],Eri[:,:nbas,:,:])
-  temp_2   = np.append(temp_1,np.einsum('uq,purs->pqrs',C_2[nbas:,in1:in2],Eri[:,nbas:,:,:]),axis=1)
-  temp_3   = np.append(temp_2,np.einsum('uq,purs->pqrs',C_2[:nbas,in2:in3],Eri[:,:nbas,:,:]),axis=1)
-  Eri_temp = np.append(temp_3,np.einsum('uq,purs->pqrs',C_2[nbas:,in3:],   Eri[:,nbas:,:,:]),axis=1)
+  temp_1   =                  np.einsum('uq,purs->pqrs',C_1[:nbas,:in1],Eri[:,:nbas,:,:])
+  temp_2   = np.append(temp_1,np.einsum('uq,purs->pqrs',C_1[nbas:,in1:in2],Eri[:,nbas:,:,:]),axis=1)
+  temp_3   = np.append(temp_2,np.einsum('uq,purs->pqrs',C_1[:nbas,in2:in3],Eri[:,:nbas,:,:]),axis=1)
+  Eri_temp = np.append(temp_3,np.einsum('uq,purs->pqrs',C_1[nbas:,in3:],   Eri[:,nbas:,:,:]),axis=1)
 
   temp_1 =                  np.einsum('up,uqrs->pqrs',C_1[:nbas,:in1],   Eri_temp[:nbas,:,:,:])
   temp_2 = np.append(temp_1,np.einsum('up,uqrs->pqrs',C_1[nbas:,in1:in2],Eri_temp[nbas:,:,:,:]),axis=0)
