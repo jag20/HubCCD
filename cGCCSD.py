@@ -86,7 +86,7 @@ def ccsd(ham,ampfile="none"):
 		T1_down_up_u[u] = np.einsum('ia,ia',C_down_up_pqu[:ham.nocc,ham.nocc:,u],T1)
 		T1_down_down_u[u]   = np.einsum('ia,ia',C_down_down_pqu[:ham.nocc,ham.nocc:,u],T1)
 
-	#Intermediates for the singles equation
+	#Intermediates for the singles equations
 	J_kc  = np.einsum('kcu,u->kc',C_up_up_pqu[:ham.nocc,ham.nocc:,:],T1_down_down_u)
 	J_kc -= np.einsum('kcu,u->kc',C_up_down_pqu[:ham.nocc,ham.nocc:,:],T1_down_up_u)
 	J_kc -= np.einsum('kcu,u->kc',C_down_up_pqu[:ham.nocc,ham.nocc:,:],T1_up_down_u)
@@ -114,8 +114,16 @@ def ccsd(ham,ampfile="none"):
 	G1 -= 0.5e0*np.einsum('ic,ac->ia',T1,J_ac)
 	G1 -= 0.5e0*np.einsum('ka,ki->ia',T1,J_ki)
 	G1 += 0.5e0*ham.U*(np.einsum('ua,iu->ia',np.conj(C_up[:,ham.nocc:]),Tau_down_iu) 
-        - np.einsum('ua,iu->ia',np.conj(C_down[:,ham.nocc:]),Tau_up_iu))
+       -  np.einsum('ua,iu->ia',np.conj(C_down[:,ham.nocc:]),Tau_up_iu))
+	G1 -= 0.5e0*ham.U*(np.einsum('ui,ua->ia',C_up[:,:ham.nocc],Tau_down_ua) 
+       - np.einsum('ui,ua->ia',C_down[:,:ham.nocc],Tau_up_ua))
+	G1 += ham.U*(np.einsum('aiu,u->ia',C_up_up_pqu[ham.nocc:,:ham.nocc,:],T1_down_down_u)
+	   -  np.einsum('aiu,u->ia',C_up_down_pqu[ham.nocc:,:ham.nocc,:],T1_down_up_u)
+	   -  np.einsum('aiu,u->ia',C_down_up_pqu[ham.nocc:,:ham.nocc,:],T1_up_down_u)
+	   +  np.einsum('aiu,u->ia',C_down_down_pqu[ham.nocc:,:ham.nocc,:],T1_down_down_u))
 
+
+	#Get G2
 
  
  
