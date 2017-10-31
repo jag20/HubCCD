@@ -7,14 +7,15 @@ from CCDutils import *
 def ccd(ham,ampfile="none",variant="ccd"):
   import pickle
   import os
-  Gs  = {"uhf":GHFCCD, "rhf": RHFCCD}
-  ens = {"uhf":GCCDEn, "rhf": RCCDEn}
+  Gs  = {"ghf":GHFCCD, "rhf": RHFCCD}
+  ens = {"ghf":GCCDEn, "rhf": RCCDEn}
 
 
   getG   = Gs[ham.wfn_type]
   energy = ens[ham.wfn_type]
    
 
+  damping=1
   #read amplitudes from file if present to improve convergence
   if ((ampfile != 'none') and(os.path.isfile(ampfile))):
     with open(ampfile, 'rb') as f:
@@ -40,7 +41,7 @@ def ccd(ham,ampfile="none",variant="ccd"):
     G = getG(ham.F,ham.Eri,T,ham.nocc,ham.nbas,niter,variant=variant)
     error, Err_vec = get_Err(ham.F,G,T,ham.nocc,ham.nvirt)
 
-    T = solveccd(ham.F,G,T,ham.nocc,ham.nvirt)
+    T = solveccd(ham.F,G,T,ham.nocc,ham.nvirt,x=damping)
     ecorr = energy(ham.Eri,T,ham.nocc)
     
     niter += 1
