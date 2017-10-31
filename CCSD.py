@@ -37,7 +37,7 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 		T1 = np.zeros([ham.nocc,ham.nvirt])
 		eold = 0.0e0
 
-	#Set up for CCD iteration and DIIS. interpolate doubles only for now
+	#Set up for CCSD iteration and DIIS. 
 	diis_start, diis_dim, Errors, T2s, Err_vec = CCDutils.diis_setup(ham.nocc,ham.nvirt)
 	T1Errors, T1s, T1Err_vec = diis_singles_setup(ham.nocc,ham.nvirt,diis_start,diis_dim)
 	G1 = CCSDsingles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
