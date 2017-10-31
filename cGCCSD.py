@@ -1,5 +1,6 @@
 import numpy as np
-from scf import moUHF_to_GHF
+import cCCutils
+from scf import moUHF_to_GHF, onee_MO_tran
 #This routine implements complex generalized CCSD for the Hubbard Hamiltonian in N^5 scaling
 #by exploiting the sparsity of the two-electron integrals for Hubbard. Derivation and factorization
 #of the spin-orbital CCSD equations were worked out by Tom Henderson.
@@ -7,20 +8,37 @@ def ccsd(ham,ampfile="none"):
 	if (ham.hamtype != 'Hubbard'):
 		print("This routine should only be used for Hubbard in the spin-orbital basis.")
 	if (ham.wfn_type == 'uhf'):
-		print("converting UHF wavefunction to spin-orbital basis")
-		ham.F, ham.Eri, ham.C = moUHF_to_GHF(ham.C_a,ham.C_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.nocca,ham.noccb,ham.nbas)
+		print("converting One-electron Integrals to spin-orbital basis")
+		Fa_ao   = onee_MO_tran(ham.F_a,np.linalg.inv(ham.C_a))
+		Fb_ao   = onee_MO_tran(ham.F_b,np.linalg.inv(ham.C_b))
+		nvirta = ham.nbas-ham.nocca
+		nvirtb = ham.nbas-ham.noccb
+		C = np.zeros([ham.nbas*2,ham.nbas*2])
+		F = np.zeros([ham.nbas*2,ham.nbas*2])
+		#Build spin-orbital Mo coefficients
+		C[:ham.nbas,:ham.nocca] = ham.C_a[:,:ham.nocca]
+		C[ham.nbas:,ham.nocca:(ham.nocca+ham.noccb)] = ham.C_b[:,:ham.noccb]
+		C[:ham.nbas,(ham.nocca+ham.noccb):(ham.nocca+ham.noccb+nvirta)]  = ham.C_a[:,ham.nocca:]
+		C[ham.nbas:,(ham.nocca+ham.noccb+nvirta):] = ham.C_b[:,ham.noccb:]
+		#build spinorbital fock
+		F[:ham.nbas,:ham.nbas] = ham.F_a
+		F[ham.nbas:,ham.nbas:] = ham.F_b
+		F = onee_MO_tran(F,C)
+		ham.F = np.copy(F)
+		ham.C = np.copy(C)
+
 		ham.nso = 2*ham.nbas
 		ham.nocc  = ham.nocca + ham.noccb
 		ham.nvirt = ham.nvirta + ham.nvirtb
 		ham.wfn_type = 'ghf'
 
-	if (ham.Eri.dtype ==float):
+	if (ham.F.dtype ==float):
 		print("Converting real integrals to complex")
-		ham.Eri = ham.Eri.astype(np.complex)
 		ham.F = ham.F.astype(np.complex)
 
 
 	#Initialize/get amplitudes
+	damping = 1
 	T2 = np.zeros([ham.nocc,ham.nocc,ham.nvirt,ham.nvirt],dtype=np.complex)
 	T1 = np.zeros([ham.nocc,ham.nvirt],dtype=np.complex)
 
@@ -49,20 +67,20 @@ def ccsd(ham,ampfile="none"):
 
 	#Effective Amplitude Intermediates
 	Tau = T2 + np.einsum('ia,jb->ijab',T1,T1)  - np.einsum('ib,ja->ijab',T1,T1)
-	Tau_iju = np.einsum('ijab,uab->iju',Tau,Cuij[:,ham.nocc:,ham.nocc:])
-	Tau_uab = np.einsum('ijab,iju->uab',Tau,Cabu[:ham.nocc,:ham.nocc,:])
-	T_up_up_jbu = np.einsum('ijab,iau->jbu',T2,C_up_up_pqu[:ham.nocc,ham.nocc:,:])
-	T_up_down_jbu = np.einsum('ijab,iau->jbu',T2,C_up_down_pqu[:ham.nocc,ham.nocc:,:])
-	T_down_up_jbu = np.einsum('ijab,iau->jbu',T2,C_down_up_pqu[:ham.nocc,ham.nocc:,:])
-	T_down_down_jbu = np.einsum('ijab,iau->jbu',T2,C_down_down_pqu[:ham.nocc,ham.nocc:,:])
+	Tau_uij = np.einsum('ijab,uab->uij',Tau,Cuij[:,ham.nocc:,ham.nocc:])
+	Tau_abu = np.einsum('ijab,iju->abu',Tau,Cabu[:ham.nocc,:ham.nocc,:])
+	T_up_up_bju = np.einsum('ijab,iau->bju',T2,C_up_up_pqu[:ham.nocc,ham.nocc:,:])
+	T_up_down_bju = np.einsum('ijab,iau->bju',T2,C_up_down_pqu[:ham.nocc,ham.nocc:,:])
+	T_down_up_bju = np.einsum('ijab,iau->bju',T2,C_down_up_pqu[:ham.nocc,ham.nocc:,:])
+	T_down_down_bju = np.einsum('ijab,iau->bju',T2,C_down_down_pqu[:ham.nocc,ham.nocc:,:])
 	Tau_up_iu = np.zeros((ham.nocc,ham.nbas),dtype=np.complex)
 	Tau_down_iu = np.zeros((ham.nocc,ham.nbas),dtype=np.complex)
 	T_up_iu = np.zeros((ham.nocc,ham.nbas),dtype=np.complex)
 	T_down_iu = np.zeros((ham.nocc,ham.nbas),dtype=np.complex)
 	for i in range(ham.nocc):
 		for u in range(ham.nbas):
-			Tau_up_iu[i,u]   = np.einsum('j,j',Tau_iju[i,:,u],np.conj(C_up[u,:ham.nocc]))
-			Tau_down_iu[i,u] = np.einsum('j,j',Tau_iju[i,:,u],np.conj(C_down[u,:ham.nocc]))
+			Tau_up_iu[i,u]   = np.einsum('j,j',Tau_uij[u,i,:],np.conj(C_up[u,:ham.nocc]))
+			Tau_down_iu[i,u] = np.einsum('j,j',Tau_uij[u,i,:],np.conj(C_down[u,:ham.nocc]))
 			T_up_iu[i,u]   = np.einsum('a,a',T1[i,:],C_up[u,ham.nocc:])
 			T_down_iu[i,u] = np.einsum('a,a',T1[i,:],C_down[u,ham.nocc:])
 
@@ -72,8 +90,8 @@ def ccsd(ham,ampfile="none"):
 	T_down_ua = np.zeros((ham.nbas,ham.nvirt),dtype=np.complex)
 	for u in range(ham.nbas):
 		for a in range(ham.nvirt):
-			Tau_up_ua[u,a]   = np.einsum('b,b',Tau_uab[u,a,:],C_up[u,ham.nocc:])
-			Tau_down_ua[u,a] = np.einsum('b,b',Tau_uab[u,a,:],C_down[u,ham.nocc:])
+			Tau_up_ua[u,a]   = np.einsum('b,b',Tau_abu[a,:,u],C_up[u,ham.nocc:])
+			Tau_down_ua[u,a] = np.einsum('b,b',Tau_abu[a,:,u],C_down[u,ham.nocc:])
 			T_up_ua[u,a]   = np.einsum('i,i',T1[:,a],np.conj(C_up[u,:ham.nocc]))
 			T_down_ua[u,a] = np.einsum('i,i',T1[:,a],np.conj(C_down[u,:ham.nocc]))
 	T1_up_up_u     = np.zeros((ham.nbas),dtype=np.complex)
@@ -123,16 +141,103 @@ def ccsd(ham,ampfile="none"):
 	   +  np.einsum('aiu,u->ia',C_down_down_pqu[ham.nocc:,:ham.nocc,:],T1_down_down_u))
 
 
-	#Get G2
+	#Intermediates for doubles equations
+	X_up_up_aiu = C_up_up_pqu[ham.nocc:,:ham.nocc,:] + 0.50e0*T_up_up_bju 
+	X_up_down_aiu = C_up_down_pqu[ham.nocc:,:ham.nocc,:] + 0.50e0*T_up_down_bju 
+	X_down_up_aiu = C_down_up_pqu[ham.nocc:,:ham.nocc,:] + 0.50e0*T_down_up_bju 
+	X_down_down_aiu = C_down_down_pqu[ham.nocc:,:ham.nocc,:] + 0.50e0*T_down_down_bju 
+	for a in range(ham.nvirt):
+		aa = a + ham.nocc
+		for i in range(ham.nocc):
+			for u in range(ham.nbas):
+				X_up_up_aiu[a,i,u] -= T_up_iu[i,u]*T_up_ua[u,a]
+				X_up_up_aiu[a,i,u] += T_up_iu[i,u]*np.conj(C_up[u,aa])
+				X_up_up_aiu[a,i,u] -= T_up_iu[i,u]*np.conj(C_up[u,aa])
 
+				X_up_down_aiu[a,i,u] -= T_up_iu[i,u]*T_down_ua[u,a]
+				X_up_down_aiu[a,i,u] += T_up_iu[i,u]*np.conj(C_down[u,aa])
+				X_up_down_aiu[a,i,u] -= T_up_iu[i,u]*np.conj(C_down[u,aa])
+
+				X_down_up_aiu[a,i,u] -= T_down_iu[i,u]*T_up_ua[u,a]
+				X_down_up_aiu[a,i,u] += T_down_iu[i,u]*np.conj(C_up[u,aa])
+				X_down_up_aiu[a,i,u] -= T_down_iu[i,u]*np.conj(C_up[u,aa])
+
+				X_down_down_aiu[a,i,u] -= T_down_iu[i,u]*T_down_ua[u,a]
+				X_down_down_aiu[a,i,u] += T_down_iu[i,u]*np.conj(C_down[u,aa])
+				X_down_down_aiu[a,i,u] -= T_down_iu[i,u]*np.conj(C_down[u,aa])
+
+
+	K_ad  = np.einsum('adu,u->ad',C_up_up_pqu[ham.nocc:,ham.nocc:,:],T1_down_down_u)
+	K_ad -= np.einsum('adu,u->ad',C_up_down_pqu[ham.nocc:,ham.nocc:,:],T1_down_up_u)
+	K_ad -= np.einsum('adu,u->ad',C_down_up_pqu[ham.nocc:,ham.nocc:,:],T1_up_down_u)
+	K_ad += np.einsum('adu,u->ad',C_down_down_pqu[ham.nocc:,ham.nocc:,:],T1_up_up_u)
+	K_ad -= 0.5e0*(np.einsum('ud,ua->ad',C_up[:,ham.nocc:],Tau_down_ua)
+         -  np.einsum('ud,ua->ad',C_down[:,ham.nocc:],Tau_up_ua))
+	K_ad *= ham.U
+	K_ad -= np.einsum('ld,la',ham.F[:ham.nocc,ham.nocc:],T1)
+	
+	K_li  = -np.einsum('liu,u->li'    ,C_up_up_pqu[:ham.nocc,:ham.nocc,:],T1_down_down_u)
+	K_li += np.einsum('liu,u->li',  C_up_down_pqu[:ham.nocc,:ham.nocc,:],T1_down_up_u)
+	K_li += np.einsum('liu,u->li',  C_down_up_pqu[:ham.nocc,:ham.nocc,:],T1_up_down_u)
+	K_li -= np.einsum('liu,u->li',C_down_down_pqu[:ham.nocc,:ham.nocc,:],T1_up_up_u)
+	K_li -= 0.5e0*(np.einsum('ul,iu->li',np.conj(C_up[:,:ham.nocc]),Tau_down_iu)
+         -  np.einsum('ul,iu->li',np.conj(C_down[:,:ham.nocc]),Tau_up_iu))
+	K_li *= ham.U
+	K_li -= np.einsum('ld,id',ham.F[:ham.nocc,ham.nocc:],T1)
+
+
+	Xuij = Cuij[:,:ham.nocc,:ham.nocc] + 0.50e0*Tau_uij 
+	Xabu = Cabu[ham.nocc:,ham.nocc:,:] + 0.50e0*Tau_abu 
+	for u in range(ham.nbas):
+		for i in range(ham.nocc):
+			for j in range(ham.nocc):
+				Xuij[u,i,j] += C_up[u,i]*T_down_iu[j,u]
+				Xuij[u,i,j] -= C_down[u,i]*T_up_iu[j,u]
+				Xuij[u,i,j] -= C_up[u,j]*T_down_iu[i,u]
+				Xuij[u,i,j] += C_down[u,j]*T_up_iu[i,u]
+		for a in range(ham.nvirt):
+			aa = a + ham.nocc
+			for b in range(ham.nvirt):
+				bb = b + ham.nocc
+				Xabu[a,b,u] -= np.conj(C_up[u,aa])*T_down_ua[u,b]
+				Xabu[a,b,u] += np.conj(C_down[u,aa])*T_up_ua[u,b]
+				Xabu[a,b,u] += np.conj(C_up[u,bb])*T_down_ua[u,a]
+				Xabu[a,b,u] += np.conj(C_down[u,bb])*T_up_ua[u,a]
+ 
+	#Get G2
+	#Rings
+	Rings  = np.einsum('aiu,bju->ijab',X_up_up_aiu,T_down_down_bju)
+	Rings -= np.einsum('aiu,bju->ijab',X_up_down_aiu,T_down_up_bju)
+	Rings -= np.einsum('aiu,bju->ijab',X_down_up_aiu,T_up_down_bju)
+	Rings += np.einsum('aiu,bju->ijab',X_up_up_aiu,T_down_down_bju)
+	Rings *= ham.U
+
+	#contractions
+	G2 = np.einsum('uij,abu->ijab',Xuij,Xabu) 
+	G2 += (Rings - np.swapaxes(Rings,2,3) - np.swapaxes(Rings,0,1) + np.swapaxes(np.swapaxes(Rings,0,1),2,3))
+	G2 += np.einsum('ad,ijdb->ijab',K_ad,T2)
+	G2 += np.einsum('db,ijad->ijab',K_ad,T2)
+	G2 += np.einsum('li,ljab->ijab',K_li,T2)
+	G2 += np.einsum('lj,ilab->ijab',K_li,T2)
+ 
+    #non-canonical terms
+	G2 += np.einsum('ac,ijcb->ijab',F_offdiag[ham.nocc:,ham.nocc:],T2)
+	G2 += np.einsum('bc,ijac->ijab',F_offdiag[ham.nocc:,ham.nocc:],T2)
+	G2 -= np.einsum('ik,kjab->ijab',F_offdiag[:ham.nocc,:ham.nocc],T2)
+	G2 -= np.einsum('jk,ikab->ijab',F_offdiag[:ham.nocc,:ham.nocc],T2)
  
  
  
  
+	#solve
+	T2 = cCCutils.solveccd(ham.F,G2,T2,ham.nocc,ham.nvirt,x=damping)
+	T1 = cCCutils.solveccs(ham.F,G1,T1,ham.nocc,ham.nvirt,x=damping)
+
+	#Get energy
+	Tau = T2 + np.einsum('ia,jb->ijab',T1,T1)  - np.einsum('ib,ja->ijab',T1,T1)
+	Tau_uij = np.einsum('ijab,uab->uij',Tau,Cuij[:,ham.nocc:,ham.nocc:])
+	ecorr = 0.25e0*np.einsum('uij,uij',np.conj(Cuij[:,:ham.nocc,:ham.nocc]),Tau_uij)
+	ecorr += np.einsum('ia,ia',ham.F[:ham.nocc,ham.nocc:],T1)
  
- 
- 
- 
- 
-	print("Done")
+	print("Done. Ecorr = ", ecorr)
  
