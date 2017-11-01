@@ -276,7 +276,7 @@ def GCCDEn(Eri,T,nocc):
 
 ##DIIS extrapolation and equation-solving routines for both RHF and GHF CCD.
 def solveccd(F,G,T,nocc,nvirt,x=4.0):
-  Tnew = np.zeros(np.shape(T))
+  Tnew = np.zeros(np.shape(T),dtype=T.dtype)
   for i in range(nocc):
     for j in range(nocc):
       for a in range(nvirt):
@@ -312,12 +312,12 @@ def diis(diis_start,diis_dim,iteration,Errors,Ts,Told,Err_vec):
     Ts [-1,:,:,:,:] = Told
 
     #solve the DIIS  Bc = l linear equation
-    B = np.zeros((diis_dim+1,diis_dim+1))
+    B = np.zeros((diis_dim+1,diis_dim+1),dtype=Told.dtype)
     B[:,-1] = -1
     B[-1,:] = -1
     B[-1,-1] = 0
     B[:-1,:-1] = np.einsum('iklab,jklab->ij',Errors,Errors)
-    l =  np.zeros(diis_dim+1)
+    l =  np.zeros(diis_dim+1,dtype=Told.dtype)
     l[-1] = -1
     c = np.linalg.solve(B,l)
 
@@ -338,7 +338,7 @@ def diis(diis_start,diis_dim,iteration,Errors,Ts,Told,Err_vec):
 
 def get_Err(F,G,T,nocc,nvirt):
   #Calculate the residual for the CC equations at a given value of T amplitudes
-  Err_vec = np.zeros((nocc,nocc,nvirt,nvirt))
+  Err_vec = np.zeros((nocc,nocc,nvirt,nvirt),dtype=T.dtype)
   for i in range(nocc):
     for j in range(nocc):
       for a in range(nvirt):

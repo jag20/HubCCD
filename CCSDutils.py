@@ -172,7 +172,7 @@ def CCSDdoubles_fact(F,Eri,T2,T1,nocc,nbas):
 
 def solveccs(F,G1,T1,nocc,nvirt,x=4.0):
 	#solve singles amplitude equations
-	T1new = np.zeros(np.shape(T1))
+	T1new = np.zeros(np.shape(T1),dtype=T1.dtype)
 	for i in range(nocc):
 		for a in range(nvirt):
 			aa = a + nocc
@@ -200,7 +200,7 @@ def diis_singles_setup(nocc,nvirt,diis_start,diis_dim):
 
 def get_singles_Err(F,G,T,nocc,nvirt):
   #Calculate the residual for the CC equations at a given value of T amplitudes
-  Err_vec = np.zeros((nocc,nvirt))
+  Err_vec = np.zeros((nocc,nvirt),dtype=T.dtype)
   for i in range(nocc):
       for a in range(nvirt):
         aa = a + nocc
@@ -222,12 +222,12 @@ def diis_singles(diis_start,diis_dim,iteration,Errors,Ts,Told,Err_vec):
     Ts [-1,:,:] = Told
 
     #solve the DIIS  Bc = l linear equation
-    B = np.zeros((diis_dim+1,diis_dim+1))
+    B = np.zeros((diis_dim+1,diis_dim+1),dtype=Told.dtype)
     B[:,-1] = -1
     B[-1,:] = -1
     B[-1,-1] = 0
     B[:-1,:-1] = np.einsum('ika,jka->ij',Errors,Errors)
-    l =  np.zeros(diis_dim+1)
+    l =  np.zeros(diis_dim+1,dtype=Told.dtype)
     l[-1] = -1
     c = np.linalg.solve(B,l)
 

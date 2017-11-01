@@ -1,43 +1,44 @@
-import numpy as np
-import cCCutils
-from scf import onee_MO_tran, moUHF_to_GHF
-#This routine implements complex generalized CCSD for the Hubbard Hamiltonian in N^5 scaling
+#Module cGSSD implements complex generalized CCSD for the Hubbard Hamiltonian in N^5 scaling
 #by exploiting the sparsity of the two-electron integrals for Hubbard. Derivation and factorization
 #of the spin-orbital CCSD equations were worked out by Tom Henderson.
+
+import numpy as np
+#import cCCutils
+import CCDutils
+import CCSDutils
+from scf import onee_MO_tran
+
 def ccsd(ham,ampfile="none"):
 	if (ham.hamtype != 'Hubbard'):
 		print("This routine should only be used for Hubbard in the spin-orbital basis.")
 	if (ham.wfn_type == 'uhf'):
 		print("converting One-electron Integrals to spin-orbital basis")
 		
-		#Fa_ao   = onee_MO_tran(ham.F_a,np.linalg.inv(ham.C_a))
-		#Fb_ao   = onee_MO_tran(ham.F_b,np.linalg.inv(ham.C_b))
-		#nvirta = ham.nbas-ham.nocca
-		#nvirtb = ham.nbas-ham.noccb
-		#C = np.zeros([ham.nbas*2,ham.nbas*2])
-		#F = np.zeros([ham.nbas*2,ham.nbas*2])
-		##Build spin-orbital Mo coefficients
-		#C[:ham.nbas,:ham.nocca] = ham.C_a[:,:ham.nocca]
-		#C[ham.nbas:,ham.nocca:(ham.nocca+ham.noccb)] = ham.C_b[:,:ham.noccb]
-		#C[:ham.nbas,(ham.nocca+ham.noccb):(ham.nocca+ham.noccb+nvirta)]  = ham.C_a[:,ham.nocca:]
-		#C[ham.nbas:,(ham.nocca+ham.noccb+nvirta):] = ham.C_b[:,ham.noccb:]
-		##build spinorbital fock
-		#F[:ham.nbas,:ham.nbas] = Fa_ao
-		#F[ham.nbas:,ham.nbas:] = Fb_ao
-		#F = onee_MO_tran(F,C)
-		#print(np.diag(F))
-		#ham.F = np.copy(F)
-		#ham.C = np.copy(C)
+		#We build the 2-e integrals on the fly, 
+		#so will only build the spin-orbital Fock matrix and MO coefficients.
+		Fa_ao   = onee_MO_tran(ham.F_a,np.linalg.inv(ham.C_a))
+		Fb_ao   = onee_MO_tran(ham.F_b,np.linalg.inv(ham.C_b))
+		nvirta = ham.nbas-ham.nocca
+		nvirtb = ham.nbas-ham.noccb
+		C = np.zeros([ham.nbas*2,ham.nbas*2])
+		F = np.zeros([ham.nbas*2,ham.nbas*2])
+		#Build spin-orbital Mo coefficients
+		C[:ham.nbas,:ham.nocca] = ham.C_a[:,:ham.nocca]
+		C[ham.nbas:,ham.nocca:(ham.nocca+ham.noccb)] = ham.C_b[:,:ham.noccb]
+		C[:ham.nbas,(ham.nocca+ham.noccb):(ham.nocca+ham.noccb+nvirta)]  = ham.C_a[:,ham.nocca:]
+		C[ham.nbas:,(ham.nocca+ham.noccb+nvirta):] = ham.C_b[:,ham.noccb:]
+		#build spinorbital fock
+		F[:ham.nbas,:ham.nbas] = Fa_ao
+		F[ham.nbas:,ham.nbas:] = Fb_ao
+		F = onee_MO_tran(F,C)
+		print(np.diag(F))
+		ham.F = np.copy(F)
+		ham.C = np.copy(C)
 
-		#ham.nso = 2*ham.nbas
-		#ham.nocc  = ham.nocca + ham.noccb
-		#ham.nvirt = ham.nvirta + ham.nvirtb
-		#ham.wfn_type = 'ghf'
-
-		ham.F, ham.Eri, ham.C = moUHF_to_GHF(ham.C_a,ham.C_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.nocca,ham.noccb,ham.nbas)
 		ham.nso = 2*ham.nbas
 		ham.nocc  = ham.nocca + ham.noccb
 		ham.nvirt = ham.nvirta + ham.nvirtb
+		ham.wfn_type = 'ghf'
 
 	if (ham.F.dtype ==float):
 		print("Converting real integrals to complex")
@@ -46,9 +47,16 @@ def ccsd(ham,ampfile="none"):
 
 
 	#Initialize/get amplitudes
-	damping = 1
 	T2 = np.zeros([ham.nocc,ham.nocc,ham.nvirt,ham.nvirt],dtype=np.complex)
 	T1 = np.zeros([ham.nocc,ham.nvirt],dtype=np.complex)
+
+
+	#set up for DIIS
+	diis_start, diis_dim, Errors, T2s, Err_vec = CCDutils.diis_setup(ham.nocc,ham.nvirt)
+	T1Errors, T1s, T1Err_vec = CCSDutils.diis_singles_setup(ham.nocc,ham.nvirt,diis_start,diis_dim)
+	#Convert arrays to complex as necessary
+	Errors, T2s, Err_vec = Errors.astype(np.complex), T2s.astype(np.complex), Err_vec.astype(np.complex)
+	T1Errors, T1s, T1Err_vec = T1Errors.astype(np.complex), T1s.astype(np.complex), T1Err_vec.astype(np.complex)
 
 	#Build some initial intermediates. ham.C is AOxMO, with alpha in the first nbas/2 rows, followed by beta.
 	C_up   =  ham.C[:ham.nbas,:]
@@ -73,8 +81,14 @@ def ccsd(ham,ampfile="none"):
 				C_down_down_pqu[p,q,u] = np.conj(C_down[u,p])*C_down[u,q]
 
 	print("Beginning Complex GCCSD Iterations")
-
-	for iteration in range(20):
+	eold = 0.0e0
+	error = 1.0
+	tol = 1.0e-8
+	damping = 2
+	niter = 1
+	while (error > tol):
+		T2, Errors, T2s   = CCDutils.diis(diis_start,diis_dim,niter,Errors,T2s,T2,Err_vec)
+		T1, T1Errors, T1s = CCSDutils.diis_singles(diis_start,diis_dim,niter,T1Errors,T1s,T1,T1Err_vec)
 	
 		#Effective Amplitude Intermediates
 		Tau = T2 + np.einsum('ia,jb->ijab',T1,T1)  - np.einsum('ib,ja->ijab',T1,T1)
@@ -84,6 +98,11 @@ def ccsd(ham,ampfile="none"):
 		T_up_down_bju   = np.einsum('ijab,iau->bju',T2,C_up_down_pqu[:ham.nocc,ham.nocc:,:])
 		T_down_up_bju   = np.einsum('ijab,iau->bju',T2,C_down_up_pqu[:ham.nocc,ham.nocc:,:])
 		T_down_down_bju = np.einsum('ijab,iau->bju',T2,C_down_down_pqu[:ham.nocc,ham.nocc:,:])
+		T_up_up_aiu     = np.einsum('ijab,jbu->aiu',T2,C_up_up_pqu[:ham.nocc,ham.nocc:,:])
+		T_up_down_aiu   = np.einsum('ijab,jbu->aiu',T2,C_up_down_pqu[:ham.nocc,ham.nocc:,:])
+		T_down_up_aiu   = np.einsum('ijab,jbu->aiu',T2,C_down_up_pqu[:ham.nocc,ham.nocc:,:])
+		T_down_down_aiu = np.einsum('ijab,jbu->aiu',T2,C_down_down_pqu[:ham.nocc,ham.nocc:,:])
+
 		Tau_up_iu = np.zeros((ham.nocc,ham.nbas),dtype=np.complex)
 		Tau_down_iu = np.zeros((ham.nocc,ham.nbas),dtype=np.complex)
 		T_up_iu = np.zeros((ham.nocc,ham.nbas),dtype=np.complex)
@@ -119,7 +138,7 @@ def ccsd(ham,ampfile="none"):
 		J_kc  = np.einsum('kcu,u->kc',C_up_up_pqu[:ham.nocc,ham.nocc:,:],T1_down_down_u)
 		J_kc -= np.einsum('kcu,u->kc',C_up_down_pqu[:ham.nocc,ham.nocc:,:],T1_down_up_u)
 		J_kc -= np.einsum('kcu,u->kc',C_down_up_pqu[:ham.nocc,ham.nocc:,:],T1_up_down_u)
-		J_kc += np.einsum('kcu,u->kc',C_down_down_pqu[:ham.nocc,ham.nocc:,:],T1_down_down_u)
+		J_kc += np.einsum('kcu,u->kc',C_down_down_pqu[:ham.nocc,ham.nocc:,:],T1_up_up_u)
 		J_kc *= ham.U
 	
 		J_ac  = np.einsum('uc,ua->ac',C_up[:,ham.nocc:],Tau_down_ua)
@@ -134,7 +153,7 @@ def ccsd(ham,ampfile="none"):
 	
 	
 		#Get G1
-		G1 = np.copy(ham.F[:ham.nocc:,ham.nocc:])
+		G1 = np.copy(ham.F[:ham.nocc,ham.nocc:])
 		F_offdiag = ham.F - np.diag(np.diag(ham.F))
 		G1 += np.einsum('ac,ic->ia',F_offdiag[ham.nocc:,ham.nocc:],T1)
 		G1 -= np.einsum('ki,ka->ia',F_offdiag[:ham.nocc,:ham.nocc],T1)
@@ -149,7 +168,7 @@ def ccsd(ham,ampfile="none"):
 		G1 += ham.U*(np.einsum('aiu,u->ia',C_up_up_pqu[ham.nocc:,:ham.nocc,:],T1_down_down_u)
 		   -  np.einsum('aiu,u->ia',C_up_down_pqu[ham.nocc:,:ham.nocc,:],T1_down_up_u)
 		   -  np.einsum('aiu,u->ia',C_down_up_pqu[ham.nocc:,:ham.nocc,:],T1_up_down_u)
-		   +  np.einsum('aiu,u->ia',C_down_down_pqu[ham.nocc:,:ham.nocc,:],T1_down_down_u))
+		   +  np.einsum('aiu,u->ia',C_down_down_pqu[ham.nocc:,:ham.nocc,:],T1_up_up_u))
 	
 	
 		#Intermediates for doubles equations
@@ -157,6 +176,10 @@ def ccsd(ham,ampfile="none"):
 		X_up_down_aiu   = C_up_down_pqu[ham.nocc:,:ham.nocc,:]   + 0.50e0*T_up_down_bju 
 		X_down_up_aiu   = C_down_up_pqu[ham.nocc:,:ham.nocc,:]   + 0.50e0*T_down_up_bju 
 		X_down_down_aiu = C_down_down_pqu[ham.nocc:,:ham.nocc,:] + 0.50e0*T_down_down_bju 
+#		X_up_up_aiu     = C_up_up_pqu[ham.nocc:,:ham.nocc,:]     + 0.50e0*T_up_up_aiu 
+#		X_up_down_aiu   = C_up_down_pqu[ham.nocc:,:ham.nocc,:]   + 0.50e0*T_up_down_aiu 
+#		X_down_up_aiu   = C_down_up_pqu[ham.nocc:,:ham.nocc,:]   + 0.50e0*T_down_up_aiu 
+#		X_down_down_aiu = C_down_down_pqu[ham.nocc:,:ham.nocc,:] + 0.50e0*T_down_down_aiu 
 		for a in range(ham.nvirt):
 			aa = a + ham.nocc
 			for i in range(ham.nocc):
@@ -171,11 +194,11 @@ def ccsd(ham,ampfile="none"):
 	
 					X_down_up_aiu[a,i,u] -= T_down_iu[i,u]*T_up_ua[u,a]
 					X_down_up_aiu[a,i,u] += T_down_iu[i,u]*np.conj(C_up[u,aa])
-					X_down_up_aiu[a,i,u] -= T_up_iu[i,u]*C_down[u,i]
+					X_down_up_aiu[a,i,u] -= T_up_ua[u,a]*C_down[u,i]
 	
 					X_down_down_aiu[a,i,u] -= T_down_iu[i,u]*T_down_ua[u,a]
 					X_down_down_aiu[a,i,u] += T_down_iu[i,u]*np.conj(C_down[u,aa])
-					X_down_down_aiu[a,i,u] -= T_down_iu[i,u]*C_down[u,i]
+					X_down_down_aiu[a,i,u] -= T_down_ua[u,a]*C_down[u,i]
 	
 	
 		K_ad  = np.einsum('adu,u->ad',C_up_up_pqu[ham.nocc:,ham.nocc:,:],T1_down_down_u)
@@ -213,7 +236,9 @@ def ccsd(ham,ampfile="none"):
 					Xabu[a,b,u] -= np.conj(C_up[u,aa])*T_down_ua[u,b]
 					Xabu[a,b,u] += np.conj(C_down[u,aa])*T_up_ua[u,b]
 					Xabu[a,b,u] += np.conj(C_up[u,bb])*T_down_ua[u,a]
-					Xabu[a,b,u] += np.conj(C_down[u,bb])*T_up_ua[u,a]
+#					Xabu[a,b,u] += np.conj(C_down[u,bb])*T_up_ua[u,a]
+#					Check with Tom about Notes, but I think this term should have the opposite sign
+					Xabu[a,b,u] -= np.conj(C_down[u,bb])*T_up_ua[u,a]
 	 
 		#Get G2
 		#Rings
@@ -227,7 +252,7 @@ def ccsd(ham,ampfile="none"):
 		G2  = ham.U*np.einsum('uij,abu->ijab',Xuij,Xabu) 
 		G2 += (Rings - np.swapaxes(Rings,2,3) - np.swapaxes(Rings,0,1) + np.swapaxes(np.swapaxes(Rings,0,1),2,3))
 		G2 += np.einsum('ad,ijdb->ijab',K_ad,T2)
-		G2 += np.einsum('db,ijad->ijab',K_ad,T2)
+		G2 += np.einsum('bd,ijad->ijab',K_ad,T2)
 		G2 += np.einsum('li,ljab->ijab',K_li,T2)
 		G2 += np.einsum('lj,ilab->ijab',K_li,T2)
 	 
@@ -238,17 +263,24 @@ def ccsd(ham,ampfile="none"):
 		G2 -= np.einsum('jk,ikab->ijab',F_offdiag[:ham.nocc,:ham.nocc],T2)
 	 
 	 
+		#Get error vecs (residuals HT-G)
+		T2error, Err_vec   = CCDutils.get_Err(ham.F,G2,T2,ham.nocc,ham.nvirt)
+		T1error, T1Err_vec = CCSDutils.get_singles_Err(ham.F,G1,T1,ham.nocc,ham.nvirt)
 	 
 	 
-		#solve
-		T2 = cCCutils.solveccd(ham.F,G2,T2,ham.nocc,ham.nvirt,x=damping)
-#		T1 = cCCutils.solveccs(ham.F,G1,T1,ham.nocc,ham.nvirt,x=damping)
+		#solve HT = G
+		T2 = CCDutils.solveccd(ham.F,G2,T2,ham.nocc,ham.nvirt,x=damping)
+		T1 = CCSDutils.solveccs(ham.F,G1,T1,ham.nocc,ham.nvirt,x=damping)
 	
 		#Get energy
 		Tau = T2 + np.einsum('ia,jb->ijab',T1,T1)  - np.einsum('ib,ja->ijab',T1,T1)
 		Tau_uij = np.einsum('ijab,uab->uij',Tau,C_upq[:,ham.nocc:,ham.nocc:])
 		ecorr = 0.25*ham.U*np.einsum('iju,uij',C_pqu[:ham.nocc,:ham.nocc,:],Tau_uij)
 		ecorr += np.einsum('ia,ia',ham.F[:ham.nocc,ham.nocc:],T1)
-		print("Done. Ecorr = ", ecorr)
+		error = np.abs(eold-ecorr)
+		eold = ecorr
+		print("Iteration ", niter, " Energy = ", ecorr, " Error = ", error)
+		niter +=1
+
 	ham.ecorr = ecorr
 	 
