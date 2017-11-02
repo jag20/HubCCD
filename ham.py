@@ -134,14 +134,35 @@ class mol(ham):
       self.nbas, self.nocc, self.nvirt, self.escf, self.C, self.F, self.Eri = read_ints(self.wfn_type,fname)
     elif (self.wfn_type == 'uhf'):
        self.nbas, self.nocca, self.noccb, self.nvirta, self.nvirtb, self.escf, self.C_a, self.C_b, self.F_a, self.F_b, self.Eri_aa, self.Eri_ab, self.Eri_bb = read_ints(self.wfn_type,fname)
-#       self.Eri_aa = self.Eri_aa - np.swapaxes(self.Eri_aa,2,3)  #antisymmetrize
-#       self.Eri_bb = self.Eri_bb - np.swapaxes(self.Eri_bb,2,3)  #antisymmetrize
-#    elif (self.wfn_type == 'ghf'):
-       
-#      F_GHF, Eri_GHF, C_GHF = moUHF_to_GHF(C_a,C_b,F_a,F_b,Eri_aa,self.nocca,self.noccb,self.nbas)
+    elif (self.wfn_type == 'rohf'): 
+       self.nbas, self.nocca, self.noccb, self.nvirta, self.nvirtb, self.C_a, self.Eri_aa, P_a, P_b, X, S, H, self.nrep = read_ints(self.wfn_type,fname)
+	   #Take P to Orthogonal basis
+       self.P_a = np.dot(np.linalg.inv(X),np.dot(P_a,np.linalg.inv(X).T)) 
+       self.P_b = np.dot(np.linalg.inv(X),np.dot(P_b,np.linalg.inv(X).T)) 
+#       #Take integrals back to Orthogonal Basis
+       MOa_to_Orth = np.dot(np.linalg.inv(self.C_a),X)
+       self.OneH = onee_MO_tran(H,MOa_to_Orth)
+#	   #Keep Eris in Mulliken notation for scf
+       self.Eri = np.swapaxes(self.Eri_aa,1,2)
+       self.Eri = np.swapaxes(twoe_MO_tran(self.Eri,MOa_to_Orth,MOa_to_Orth),1,2)
+       self.F_a, self.F_b, self.C_a, self.C_b = ROHF(self)
 
-#      self.F, self.Eri, self.C = np.copy(F_GHF), np.copy(Eri_GHF), np.copy(C_GHF)
-#      self.nbas = 2*self.nbas
-#      self.nocc = self.nocca + self.noccb
-#      self.nvirt = self.nvirta + self.nvirtb
+       #Now return MO-basis integrals
+       self.F_a = onee_MO_tran(self.F_a,self.C_a)
+       self.F_b = onee_MO_tran(self.F_b,self.C_b)
+       self.Eri_aa = twoe_MO_tran(self.Eri,self.C_a,self.C_a)
+       self.Eri_ab = twoe_MO_tran(self.Eri,self.C_a,self.C_b)
+       self.Eri_bb = twoe_MO_tran(self.Eri,self.C_b,self.C_b)   
+       self.wfn_type = 'uhf' #post-HF routines don't care about S^2 constraints on MOs
+
+#    elif (self.wfn_type == 'ghf'):
+#       print('shape =', self.Eri.shape)
+#       
+#       F_GHF, Eri_GHF, C_GHF = moUHF_to_GHF(self.C_a,self.C_b,self.F_a,self.F_b,self.Eri_aa,self.nocca,self.noccb,self.nbas)
+# 
+#       self.F, self.Eri, self.C = np.copy(F_GHF), np.copy(Eri_GHF), np.copy(C_GHF)
+#       self.nbas = 2*self.nbas
+#       self.nocc = self.nocca + self.noccb
+#       self.nvirt = self.nvirta + self.nvirtb
+#       print('shape =', self.Eri.shape)
 #

@@ -21,21 +21,20 @@ def Ecorr(F_a,F_b,Eri_aa,Eri_ab,Eri_bb,T2_aa,T2_ab,T2_bb,T1_a,T1_b,nocca,noccb):
 	Eaa  = 0.25e0*np.einsum('ijab,abij',T2_aa,Eri_aa[nocca:,nocca:,:nocca,:nocca])
 	Ebb = 0.25e0*np.einsum('ijab,abij',T2_bb,Eri_bb[noccb:,noccb:,:noccb,:noccb])
 	Eab = np.einsum('ijab,abij',T2_ab,Eri_ab[nocca:,noccb:,:nocca,:noccb])
-	print("E2aa =", Eaa)
-	print("E2ab =", Eab)
-	print("E2bb =", Ebb)
+#	print("E2aa =", Eaa)
+#	print("E2ab =", Eab)
+#	print("E2bb =", Ebb)
 	E2 = Eaa + Ebb + Eab
 	#linear in singles
 	E1 = np.einsum('ia,ai',T1_a,F_a[nocca:,:nocca])
 	E1 += np.einsum('ia,ai',T1_b,F_b[noccb:,:noccb])
     
 	#quadratic in singles
-	E1 += np.einsum('ia,ai',T1_a,F_a[nocca:,:nocca])
 	E1 += 0.5e0*np.einsum('ia,jb,abij',T1_a,T1_a,Eri_aa[nocca:,nocca:,:nocca,:nocca])
 	E1 += 0.5e0*np.einsum('ia,jb,abij',T1_a,T1_b,Eri_ab[nocca:,noccb:,:nocca,:noccb])
 	E1 += 0.5e0*np.einsum('ia,jb,baji',T1_b,T1_a,Eri_ab[nocca:,noccb:,:nocca,:noccb])
 	E1 += 0.5e0*np.einsum('ia,jb,abij',T1_b,T1_b,Eri_bb[noccb:,noccb:,:noccb,:noccb])
-	print("E1 =", E1)
+#	print("E1 =", E1)
 	return E1+E2
 
 def diis_setup(diis_start,diis_dim,nocca,noccb,nvirta,nvirtb):

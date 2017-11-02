@@ -43,7 +43,7 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	G1 = CCSDsingles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
 	G2 = CCSDdoubles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
 	niter = 1
-	tol = 1.0e-8
+	tol = 1.0e-9
 	error = tol*50
 	damping= 1
 

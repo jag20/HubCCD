@@ -8,6 +8,7 @@ import pickle
 def RHF(ham,denfile):
   #guess core Hamiltonian for Fock matrix guess. For Hubbard, we get plane-wave as the RHF basis (eigenvectors of the 
   #one-electron integrals
+  print("Doing RHF")
   P = np.zeros([ham.nbas,ham.nbas])
   ham.F = buildF(P,ham.OneH,ham.Eri)
   error = 1.0
@@ -33,6 +34,7 @@ def UHF(ham,denfile="none",guess="af"):
   #as implemented here can be used
   #for arbitrary Hamiltonians.
 
+  print("Doing UHF")
 
   #Add a check for Fortran-ordered, text-based alpha and beta MO coefficients 
   #to interface with Ethan's code
@@ -185,6 +187,97 @@ def UHF(ham,denfile="none",guess="af"):
   return F_a, F_b, C_a, C_b
 
 
+
+def ROHF(ham,denfile="none"):
+  #This function implements ROHF as described in Tsuchimochi and Scuseria J. Chem. Phys. 133, 141102 (2010).
+  #The algorithm is essentially UHF, with small modifications to the Fock matrix that come from Lagrange multipliers
+  #That constrain the spin contamination to be zero.
+  #In my work, I only have use for ROHF on molecules, so we will eliminate Hubbard-specific guesses that appear in UHF above.
+
+  print("Doing ROHF")
+
+  P_a = np.copy(ham.P_a)
+  P_b = np.copy(ham.P_b)
+
+#  F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
+  #Set some values and do the UHF iteration
+  error = 1.0
+  tol = 1.0e-15
+  eold = 1.0
+  niter = 1
+  x = 5.0
+  while (error  > tol):
+
+    F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
+    escf = calc_euhf(P_a,P_b,F_a,F_b,ham.OneH) + ham.nrep
+    #-----CUHF modification
+    #Build charge density matrix and get transformation to NO basis
+    P = 0.5e0*(P_a+P_b)
+    occ_nums, AO_to_NO = np.linalg.eigh(P)
+    idx = (-occ_nums).argsort()
+    occ_nums = occ_nums[idx]
+    AO_to_NO = AO_to_NO[:,idx]
+
+    #Transform Fock matrices to NO basis
+    F_a = onee_MO_tran(F_a,AO_to_NO)
+    F_b = onee_MO_tran(F_b,AO_to_NO)
+
+    #Modify the cv and vc terms a la CUHF (see reference). That is, set the core-virtual
+    #blocks of the Fock matrices to be their closed-shell pieces
+    F_core = 0.50e0*(F_a[:ham.noccb,ham.nocca:] + F_b[:ham.noccb,ham.nocca:])
+    F_a[:ham.noccb,ham.nocca:] = F_core
+    F_a[ham.nocca:,:ham.noccb] = F_core.T
+    F_b[:ham.noccb,ham.nocca:] = F_core
+    F_b[ham.nocca:,:ham.noccb] = F_core.T
+   
+    
+    #Transform Fock matrices back to AO basis and continue with UHF iteration.
+    F_a = onee_MO_tran(F_a,AO_to_NO.T)
+    F_b = onee_MO_tran(F_b,AO_to_NO.T)
+    #-----CUHF modification
+
+#    #Get MO Coefficients
+    e, C_a = np.linalg.eigh(F_a)
+    idx = e.argsort()
+    e = e[idx]
+    C_a = C_a[:,idx]
+    e, C_b = np.linalg.eigh(F_b)
+    idx = e.argsort()
+    e = e[idx]
+    C_b = C_b[:,idx]
+    #Build new Density Matrices, with level shift for convergence
+    TempA = (buildP(C_a,ham.nocca))
+    TempB = (buildP(C_b,ham.noccb))
+    P_a = (TempA)/x + (x-1.0)/x*P_a  
+    P_b = (TempB)/x + (x-1.0)/x*P_b
+#    #Build final fock matrices
+#    F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
+    #check convergence on energy
+    escf = calc_euhf(P_a,P_b,F_a,F_b,ham.OneH) + ham.nrep
+    print( "iteration = ", niter, "escf = ", escf)
+    error = abs(eold-escf)
+    eold = escf
+    niter += 1
+ 
+
+  #Build final fock matrices
+  F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
+  ham.escf = escf + ham.nrep
+
+  if (denfile.lower() != "none"):
+      with open(denfile, "wb") as f:
+        pickle.dump(P_a, f)
+        pickle.dump(P_b, f)
+
+  ham.Pa = np.copy(P_a)
+  ham.Pb = np.copy(P_b)
+  return F_a, F_b, C_a, C_b
+
+
+
+
+
+
 def ao_to_GHF(C_a,C_b,F_a,F_b,Eriao,nocca,noccb,nbas):
   #Transform the UHF integrals to GHF form and transform to MO basis
   nvirta = nbas-nocca
@@ -218,10 +311,6 @@ def moUHF_to_GHF(C_a,C_b,F_a,F_b,Eri_aa,nocca,noccb,nbas):
   #We already have the MO integrals, but it's easier to get the ordering in the spin-orbital basis correct if we first
   #transform back to the AO basis and then multiply by the spin-orbital basis eigenvectors. 
 
-  #first un-antisymmetrize and go back to mulliken order
-#  Eri_aa = np.swapaxes(Eri_aa,1,2)
-#  Eri_aa = Eri_aa + np.swapaxes(Eri_aa,2,3)
-  
   #Eri_aa to ao basis. The transformation also takes them back to back to mulliken order
   Eriao = twoe_MO_tran(Eri_aa,np.linalg.inv(C_a),np.linalg.inv(C_a))
   Fa_ao   = onee_MO_tran(F_a,np.linalg.inv(C_a))
@@ -279,7 +368,6 @@ def twoe_MO_tran(Eri,C_1,C_2):
   #Transform one- and two-electron integrals to MO basis. The transformation of the 4-index array can be worked out by writing the 
   #basis transformation of a normal 2-D matrix as sums over the matrix elements. Input array assumed to be mulliken ordering (pq|rs).
   #Output integrals are in Dirac ordering <pr|qs>
-  print("in MO Tran")
   Eri_temp  = np.einsum('us,pqru->pqrs',C_2,Eri)
   Eri       = np.einsum('ur,pqus->pqrs',C_2,Eri_temp)
   Eri_temp  = np.einsum('uq,purs->pqrs',C_1,Eri)

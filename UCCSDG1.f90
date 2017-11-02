@@ -32,8 +32,7 @@
 
 !===============================================================================!
 ! This routine gets the right hand side of the singles equations for CCSD.      !
-! I will not talk about ladders, etc. b/c I honestly don't know which terms     !
-! are which. Terms will be grouped on my notes, based on the equations given    !
+! Terms will be grouped on my notes, based on the equations given    !
 ! c.a. p. 308 in Shavitt and Bartlett                                           ! 
 !===============================================================================!
 

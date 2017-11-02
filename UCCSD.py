@@ -33,6 +33,8 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 			T2_bb = pickle.load(f)
 			T1_a = pickle.load(f)
 			T1_b = pickle.load(f)
+#	print(ham.F_a)
+#	print(ham.F_b)
 #
 #		E2 = CCDutils.GCCDEn(ham.Eri,T2,ham.nocc)
 #		E1 = GCCSEn(ham.F,ham.Eri,T1,ham.nocc)
@@ -53,12 +55,17 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	G2_bb = np.zeros([ham.noccb,ham.noccb,ham.nvirtb,ham.nvirtb],order='F')
 	G1_a  = np.zeros([ham.nocca,ham.nvirta],order='F')
 	G1_b  = np.zeros([ham.noccb,ham.nvirtb],order='F')
-	G1_a, G1_b  = getg1(T1_a,T1_b,T2_aa,T2_ab,T2_bb,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb, ham.nocca,ham.noccb,ham.nbas)
-	G2_aa, G2_ab, G2_bb = getccsdg2(T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca,ham.noccb,ham.nbas)
+#	G1_a, G1_b  = getg1(T1_a,T1_b,T2_aa,T2_ab,T2_bb,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb, ham.nocca,ham.noccb,ham.nbas)
+#	G2_aa, G2_ab, G2_bb = getccsdg2(T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca,ham.noccb,ham.nbas)
 	eold  = 0.0e0
-
+#
 	tol_off = 1.0e-08
-	F_a_offdiag = ham.F_a - np.diag(np.diag(ham.F_a))
+#	F_a_offdiag = ham.F_a - np.diag(np.diag(ham.F_a))
+#	F_b_offdiag = ham.F_b - np.diag(np.diag(ham.F_b))
+	F_a_offdiag = np.copy(ham.F_a)
+	F_b_offdiag = np.copy(ham.F_b)
+	np.fill_diagonal(F_a_offdiag,0.0)
+	np.fill_diagonal(F_b_offdiag,0.0)
 	if np.amax(abs(F_a_offdiag) > tol_off):
 		print("Using a non-canonical basis")
 		F_b_offdiag = ham.F_b - np.diag(np.diag(ham.F_b))
@@ -76,7 +83,7 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	T1bErrors, T1bs, T1bErr_vec = diis_singles_setup(ham.noccb,ham.nvirtb,diis_start,diis_dim)
 
 	niter = 1
-	tol = 1.0e-8
+	tol = 1.0e-10
 	error = tol*50
 	damping= 1
 
@@ -92,13 +99,16 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 		G1_a, G1_b  = getg1(T1_a,T1_b,T2_aa,T2_ab,T2_bb,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb, ham.nocca,ham.noccb,ham.nbas)
 		G2_aa, G2_ab, G2_bb = getccsdg2(T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca,ham.noccb,ham.nbas)
 	#off-diagonal fock terms from LHS if non-canonical basis
-		if np.amax(abs(F_a_offdiag) > tol_off):
-			offs = UCCSDutils.get_non_canon(F_a_offdiag,F_b_offdiag,T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.nocca,ham.noccb)
-			G1_a  += offs[0]
-			G1_b  += offs[1]
-			G2_aa += offs[2]
-			G2_ab += offs[3]
-			G2_bb += offs[4]
+		
+#		if np.amax(abs(F_a_offdiag) > tol_off):
+#			G_old = np.copy(G2_ab)
+		
+		offs = UCCSDutils.get_non_canon(F_a_offdiag,F_b_offdiag,T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.nocca,ham.noccb)
+		G1_a  += offs[0]
+		G1_b  += offs[1]
+		G2_aa += offs[2]
+		G2_ab += offs[3]
+		G2_bb += offs[4]
 	#Get error vecs (residuals HT-G)
 		T2aaerror, T2aaErr_vec = CCDutils.get_Err(ham.F_a,G2_aa,T2_aa,ham.nocca,ham.nvirta)
 		T2aberror, T2abErr_vec = UCCSDutils.get_Err(ham.F_a,ham.F_b,G2_ab,T2_ab,ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb)
@@ -114,6 +124,7 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 		T2_aa = CCDutils.solveccd(ham.F_a,G2_aa,T2_aa,ham.nocca,ham.nvirta,x=damping)
 		T2_ab = UCCSDutils.solveccd(ham.F_a,ham.F_b,G2_ab,T2_ab,ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb,x=damping)
 		T2_bb = CCDutils.solveccd(ham.F_b,G2_bb,T2_bb,ham.noccb,ham.nvirtb,x=damping)
+
 
 	#Get convergence error
 #		T2error = np.amax(T2-T2s[-1,:,:,:,:])

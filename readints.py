@@ -38,9 +38,9 @@ def read_ints(wfn_type,fname):
 
   #Get necessary arrays and transpose, since Gaussian writes in Fortran style
   aoe  = mel.matlist["ALPHA ORBITAL ENERGIES"].expand().reshape((mel.nbsuse))
-  F = mel.matlist["ALPHA FOCK MATRIX"].expand().reshape((nrorb,nrorb)).T
+  F_a = mel.matlist["ALPHA FOCK MATRIX"].expand().reshape((nrorb,nrorb)).T
   C_a = mel.matlist["ALPHA MO COEFFICIENTS"].expand().reshape((nrorb,nrorb)).T
-  P = mel.matlist["ALPHA DENSITY MATRIX"].expand().reshape((nrorb,nrorb)).T #P is in AO basis
+  P = mel.matlist["ALPHA SCF DENSITY MATRIX"].expand().reshape((nrorb,nrorb)).T #P is in AO basis
   X = mel.matlist["ORTHOGONAL BASIS"].expand().reshape((nrorb,nrorb)).T
   Xinv = np.linalg.inv(X)
   H = mel.matlist["CORE HAMILTONIAN ALPHA"].expand().reshape((nrorb,nrorb)).T
@@ -48,19 +48,19 @@ def read_ints(wfn_type,fname):
   aa2e = mel.matlist["AA MO 2E INTEGRALS"].expand().reshape((ldima,nrorb,nrorb,nrorb)).T
 
   #convert to orthogonalized MO basis, C will do this for us
-  F_a = np.dot(C_a.T,np.dot(F,C_a))
+  F_a = np.dot(C_a.T,np.dot(F_a,C_a))
   H_aa = np.dot(C_a.T,np.dot(H,C_a))
   #ERIs to Dirac ordering
   ERI_aa = np.swapaxes(aa2e,1,2)
 
   #other scalars
   eref = mel.scalar("escf")
+  nrep = mel.scalar("enucrep")
 
   if (wfn_type == "rhf"):
     print("Returning RHF molecular parameters")
     return nrorb, noa, nva, eref, C_a, F_a, ERI_aa
-  else:
-    print("Returning UHF molecular parameters")
+  if ((wfn_type =='uhf') or (wfn_type == 'rohf')):
     F_b = mel.matlist["BETA FOCK MATRIX"].expand().reshape((nrorb,nrorb)).T
     C_b = mel.matlist["BETA MO COEFFICIENTS"].expand().reshape((nrorb,nrorb)).T
     F_b = np.dot(C_b.T,np.dot(F_b,C_b))
@@ -69,7 +69,12 @@ def read_ints(wfn_type,fname):
     bb2e = mel.matlist["BB MO 2E INTEGRALS"].expand().reshape((ldima,nrorb,nrorb,nrorb)).T
     ERI_ab = np.swapaxes(ab2e,1,2)
     ERI_bb = np.swapaxes(bb2e,1,2)
+    if (wfn_type == 'rohf'):
+      P_a = mel.matlist["ALPHA SCF DENSITY MATRIX"].expand().reshape((nrorb,nrorb)).T #P is in AO basis
+      P_b = mel.matlist["BETA SCF DENSITY MATRIX"].expand().reshape((nrorb,nrorb)).T #P is in AO basis
+      return nrorb, noa, nob, nva, nvb, C_a, ERI_aa, P_a, P_b, X, S, H_aa, nrep
 #    return nrorb, noa, nob, nva, nvb, eref, C_a, C_b, F_a, F_b, ERI_aa, ERI_ab, ERI_bb
+    print("Returning UHF molecular parameters")
     return nrorb, noa, nob, nva, nvb, eref, C_a, C_b, F_a, F_b, ERI_aa, ERI_ab, ERI_bb
 #    return nrorb, noa, noa, nva, nva, eref, C_a, C_a, F_a, F_a, ERI_aa, ERI_aa, ERI_aa
   
