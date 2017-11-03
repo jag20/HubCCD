@@ -104,10 +104,16 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 		T1_a, T1aErrors, T1as = diis_singles(diis_start,diis_dim,niter,T1aErrors,T1as,T1_a,T1aErr_vec)
 		T1_b, T1bErrors, T1bs = diis_singles(diis_start,diis_dim,niter,T1bErrors,T1bs,T1_b,T1bErr_vec)
 
-			#Symmetrize oo-vv block again
-		T2_aa[:ham.noccb,:ham.noccb,:,:] = 0.50e0*(T2_aa[:ham.noccb,:ham.noccb,:,:]+ np.swapaxes(T2_aa[:ham.noccb,:ham.noccb,:,:],2,3))
-		T2_ab[:ham.noccb,:,:,s_o:] = 0.50e0*(T2_ab[:ham.noccb,:,:,s_o:]+ np.swapaxes(T2_ab[:ham.noccb,:,:,s_o:],2,3))
-		T2_bb[:ham.noccb,:ham.noccb,s_o:,s_o:] = 0.50e0*(T2_bb[:,:,s_o:,s_o:]+ np.swapaxes(T2_bb[:,:,s_o:,s_o:],2,3))
+
+		#Symmetrize  for CCSD0
+		if (variant == 'rccsd0'):
+			T2_aa = 0.50e0*(T2_aa + np.swapaxes(T2_aa,2,3))
+			T2_ab = 0.50e0*(T2_ab + np.swapaxes(T2_ab,2,3))
+			T2_bb = 0.50e0*(T2_bb + np.swapaxes(T2_bb,2,3))
+		elif (variant == 'roccsd0'):
+			T2_aa[:ham.noccb,:ham.noccb,:,:] = 0.50e0*(T2_aa[:ham.noccb,:ham.noccb,:,:]+ np.swapaxes(T2_aa[:ham.noccb,:ham.noccb,:,:],2,3))
+			T2_ab[:ham.noccb,:,:,s_o:] = 0.50e0*(T2_ab[:ham.noccb,:,:,s_o:]+ np.swapaxes(T2_ab[:ham.noccb,:,:,s_o:],2,3))
+			T2_bb[:ham.noccb,:ham.noccb,s_o:,s_o:] = 0.50e0*(T2_bb[:,:,s_o:,s_o:]+ np.swapaxes(T2_bb[:,:,s_o:,s_o:],2,3))
 		
 
 
