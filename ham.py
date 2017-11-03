@@ -145,14 +145,21 @@ class mol(ham):
 #	   #Keep Eris in Mulliken notation for scf
        self.Eri = np.swapaxes(self.Eri_aa,1,2)
        self.Eri = np.swapaxes(twoe_MO_tran(self.Eri,MOa_to_Orth,MOa_to_Orth),1,2)
-       self.F_a, self.F_b, self.C_a, self.C_b = ROHF(self)
+       #Do ROHF
+       self.F_a, self.F_b, self.C_a, self.C_b, AO_to_NO = ROHF(self)
 
-       #Now return MO-basis integrals
-       self.F_a = onee_MO_tran(self.F_a,self.C_a)
-       self.F_b = onee_MO_tran(self.F_b,self.C_b)
-       self.Eri_aa = twoe_MO_tran(self.Eri,self.C_a,self.C_a)
-       self.Eri_ab = twoe_MO_tran(self.Eri,self.C_a,self.C_b)
-       self.Eri_bb = twoe_MO_tran(self.Eri,self.C_b,self.C_b)   
+       #Now return MO-basis integrals. No reason not to do NO basis, since we typically 
+	   #use ROHF orbitals for ROCCSD0.	
+#       self.F_a = onee_MO_tran(self.F_a,self.C_a)
+#       self.F_b = onee_MO_tran(self.F_b,self.C_b)
+#       self.Eri_aa = twoe_MO_tran(self.Eri,self.C_a,self.C_a)
+#       self.Eri_ab = twoe_MO_tran(self.Eri,self.C_a,self.C_b)
+#       self.Eri_bb = twoe_MO_tran(self.Eri,self.C_b,self.C_b)   
+       self.F_a = onee_MO_tran(self.F_a,AO_to_NO) 
+       self.F_b = onee_MO_tran(self.F_b,AO_to_NO)
+       self.Eri_aa = twoe_MO_tran(self.Eri,AO_to_NO,AO_to_NO) 
+       self.Eri_ab = np.copy(self.Eri_aa)
+       self.Eri_bb = np.copy(self.Eri_aa)
        self.wfn_type = 'uhf' #post-HF routines don't care about S^2 constraints on MOs
 
 #    elif (self.wfn_type == 'ghf'):

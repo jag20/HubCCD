@@ -6,6 +6,9 @@ import pickle
 import CCD
 import CCDutils
 import os
+#This function implements spin-summed UCCSD that can be used with UHF and ROHF references. RHF reference#is fine too, but we have to convert it to the UHF basis.
+#We also implement ROCCSD0 (singlet-paired coupled cluster) from John Gomez, Tom Henderson and Gus 
+#Scuseria, JCP 144, 244117 (2016).
 
 def ccsd(ham,ampfile="none",variant="ccd"):
 	if (ham.wfn_type == 'rhf'):
@@ -24,6 +27,21 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	elif (ham.wfn_type == 'uhf'):
 		ham.Eri_aa = ham.Eri_aa - np.swapaxes(ham.Eri_aa,2,3)  #antisymmetrize
 		ham.Eri_bb = ham.Eri_bb - np.swapaxes(ham.Eri_bb,2,3)  #antisymmetrize
+
+	variant = variant.lower()
+
+	#Set up a few things for singlet-paired coupled cluster
+	Fc_a = np.copy(ham.F_a)
+	Fc_b = np.copy(ham.F_b)
+	s_o = ham.nocca-ham.noccb 
+	if (variant == 'ccsd0'):
+		if (ham.wfn_type == 'rhf'):
+			variant = 'rccsd0'
+		elif (ham.wfn_type == 'uhf'):
+			variant = 'roccsd0'
+ 			#Set Fock matrices to symmetric part in oo-vv block if doing roccsd0
+			Fc_a[:ham.noccb,ham.nocca:] = 0.5e0*(ham.F_a[:ham.noccb,ham.nocca:] + ham.F_b[:ham.noccb,ham.nocca:] )
+			Fc_b[:ham.noccb,ham.nocca:] = 0.5e0*(ham.F_a[:ham.noccb,ham.nocca:] + ham.F_b[:ham.noccb,ham.nocca:] )
    
 #read amplitudes from file if present to improve convergence
 	if ((ampfile != 'none') and(os.path.isfile(ampfile))):
@@ -33,48 +51,21 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 			T2_bb = pickle.load(f)
 			T1_a = pickle.load(f)
 			T1_b = pickle.load(f)
-#	print(ham.F_a)
-#	print(ham.F_b)
-#
-#		E2 = CCDutils.GCCDEn(ham.Eri,T2,ham.nocc)
-#		E1 = GCCSEn(ham.F,ham.Eri,T1,ham.nocc)
-#		ecorr = E1 + E2
-#		eold = ecorr
-#	else:
-	#Need this for fortran routines
-	va  = ham.nocca + 1
-	vb  = ham.noccb + 1
 
-	T2_aa = np.zeros([ham.nocca,ham.nocca,ham.nvirta,ham.nvirta],order='F')
-	T2_ab = np.zeros([ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb],order='F')
-	T2_bb = np.zeros([ham.noccb,ham.noccb,ham.nvirtb,ham.nvirtb],order='F')
-	T1_a  = np.zeros([ham.nocca,ham.nvirta],order='F')
-	T1_b  = np.zeros([ham.noccb,ham.nvirtb],order='F')
+	else:
+		T2_aa = np.zeros([ham.nocca,ham.nocca,ham.nvirta,ham.nvirta],order='F')
+		T2_ab = np.zeros([ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb],order='F')
+		T2_bb = np.zeros([ham.noccb,ham.noccb,ham.nvirtb,ham.nvirtb],order='F')
+		T1_a  = np.zeros([ham.nocca,ham.nvirta],order='F')
+		T1_b  = np.zeros([ham.noccb,ham.nvirtb],order='F')
+
+	#useful to initialize RHS arrays in Fortran order, since coupled cluster RHS will be built in Fortran
 	G2_aa = np.zeros([ham.nocca,ham.nocca,ham.nvirta,ham.nvirta],order='F')
 	G2_ab = np.zeros([ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb],order='F')
 	G2_bb = np.zeros([ham.noccb,ham.noccb,ham.nvirtb,ham.nvirtb],order='F')
 	G1_a  = np.zeros([ham.nocca,ham.nvirta],order='F')
 	G1_b  = np.zeros([ham.noccb,ham.nvirtb],order='F')
-#	G1_a, G1_b  = getg1(T1_a,T1_b,T2_aa,T2_ab,T2_bb,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb, ham.nocca,ham.noccb,ham.nbas)
-#	G2_aa, G2_ab, G2_bb = getccsdg2(T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca,ham.noccb,ham.nbas)
-	eold  = 0.0e0
-#
-	tol_off = 1.0e-08
-#	F_a_offdiag = ham.F_a - np.diag(np.diag(ham.F_a))
-#	F_b_offdiag = ham.F_b - np.diag(np.diag(ham.F_b))
-	F_a_offdiag = np.copy(ham.F_a)
-	F_b_offdiag = np.copy(ham.F_b)
-	np.fill_diagonal(F_a_offdiag,0.0)
-	np.fill_diagonal(F_b_offdiag,0.0)
-	if np.amax(abs(F_a_offdiag) > tol_off):
-		print("Using a non-canonical basis")
-		F_b_offdiag = ham.F_b - np.diag(np.diag(ham.F_b))
-		offs = UCCSDutils.get_non_canon(F_a_offdiag,F_b_offdiag,T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.nocca,ham.noccb)
-		G1_a  += offs[0]
-		G1_b  += offs[1]
-		G2_aa += offs[2]
-		G2_ab += offs[3]
-		G2_bb += offs[4]
+
 	#Set up for CCSD iteration and DIIS. 
 	diis_start, diis_dim, T2aaErrors, T2aas, T2aaErr_vec = CCDutils.diis_setup(ham.nocca,ham.nvirta)
 	T2abErrors, T2abs, T2abErr_vec = UCCSDutils.diis_setup(diis_start,diis_dim,ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb)
@@ -85,30 +76,92 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	niter = 1
 	tol = 1.0e-10
 	error = tol*50
-	damping= 1
+	damping= 2
+	eold  = 0.0e0
 
+	#For offdiagonal terms in non-canonical basis
+	F_a_offdiag = np.copy(ham.F_a)
+	F_b_offdiag = np.copy(ham.F_b)
+	np.fill_diagonal(F_a_offdiag,0.0)
+	np.fill_diagonal(F_b_offdiag,0.0)
+
+	#Need this for fortran routines
+	va  = ham.nocca + 1
+	vb  = ham.noccb + 1
 
 	print("Beginning UCCSD iteration")
 	while (error > tol):
+		#Extrapolate amplitudes using DIIIS
 		T2_aa, T2aaErrors, T2aas   = CCDutils.diis(diis_start,diis_dim,niter,T2aaErrors,T2aas,T2_aa,T2aaErr_vec)
 		T2_ab, T2abErrors, T2abs   = CCDutils.diis(diis_start,diis_dim,niter,T2abErrors,T2abs,T2_ab,T2abErr_vec)
 		T2_bb, T2bbErrors, T2bbs   = CCDutils.diis(diis_start,diis_dim,niter,T2bbErrors,T2bbs,T2_bb,T2bbErr_vec)
 		T1_a, T1aErrors, T1as = diis_singles(diis_start,diis_dim,niter,T1aErrors,T1as,T1_a,T1aErr_vec)
 		T1_b, T1bErrors, T1bs = diis_singles(diis_start,diis_dim,niter,T1bErrors,T1bs,T1_b,T1bErr_vec)
+		if (variant == 'roccsd0'):
+			#Symmetrize oo-vv block
+			T2_aa[:ham.noccb,:ham.noccb,:,:] = 0.50e0*(T2_aa[:ham.noccb,:ham.noccb,:,:]+ np.swapaxes(T2_aa[:ham.noccb,:ham.noccb,:,:],2,3))
+			T2_ab[:ham.noccb,:,:,s_o:] = 0.50e0*(T2_ab[:ham.noccb,:,:,s_o:]+ np.swapaxes(T2_ab[:ham.noccb,:,:,s_o:],2,3))
+			T2_bb[:ham.noccb,:ham.noccb,s_o:,s_o:] = 0.50e0*(T2_bb[:,:,s_o:,s_o:]+ np.swapaxes(T2_bb[:,:,s_o:,s_o:],2,3))
    	#build RHS G
 		G1_a, G1_b  = getg1(T1_a,T1_b,T2_aa,T2_ab,T2_bb,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb, ham.nocca,ham.noccb,ham.nbas)
 		G2_aa, G2_ab, G2_bb = getccsdg2(T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca,ham.noccb,ham.nbas)
-	#off-diagonal fock terms from LHS if non-canonical basis
-		
-#		if np.amax(abs(F_a_offdiag) > tol_off):
-#			G_old = np.copy(G2_ab)
-		
+
+		#Get off-diagonal terms 
 		offs = UCCSDutils.get_non_canon(F_a_offdiag,F_b_offdiag,T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.nocca,ham.noccb)
 		G1_a  += offs[0]
 		G1_b  += offs[1]
 		G2_aa += offs[2]
 		G2_ab += offs[3]
 		G2_bb += offs[4]
+
+		#Symmetrize G for CCSD0
+		if (variant == 'rccsd0'):
+			G2_aa = 0.50e0*(G2_aa + np.swapaxes(G2_aa,2,3))
+			G2_ab = 0.50e0*(G2_ab + np.swapaxes(G2_ab,2,3))
+			G2_bb = 0.50e0*(G2_bb + np.swapaxes(G2_bb,2,3))
+		elif (variant == 'roccsd0'):
+			#Symmetrize oo-vv block
+			G2_aa[:ham.noccb,:ham.noccb,:,:] = 0.50e0*(G2_aa[:ham.noccb,:ham.noccb,:,:]+ np.swapaxes(G2_aa[:ham.noccb,:ham.noccb,:,:],2,3))
+			G2_ab[:ham.noccb,:,:,s_o:] = 0.50e0*(G2_ab[:ham.noccb,:,:,s_o:]+ np.swapaxes(G2_ab[:ham.noccb,:,:,s_o:],2,3))
+			G2_bb[:ham.noccb,:ham.noccb,s_o:,s_o:] = 0.50e0*(G2_bb[:,:,s_o:,s_o:]+ np.swapaxes(G2_bb[:,:,s_o:,s_o:],2,3))
+
+			#Then move open-shell coupling terms
+			G2_aa[:ham.noccb,:ham.noccb,:,:] -=(np.einsum('ix,xjab->ijab',
+          			 ham.F_a[:ham.noccb,ham.noccb:ham.nocca],T2_aa[ham.noccb:ham.nocca,:ham.noccb,:,:])
+			       + np.einsum('jx,ixab->ijab',
+		             ham.F_a[:ham.noccb,ham.noccb:ham.nocca],T2_aa[:ham.noccb,ham.noccb:ham.nocca,:,:]))
+			G2_bb[:,:,s_o:,s_o:] +=(np.einsum('ax,ijxb->ijab',
+		     		 ham.F_b[ham.nocca:,ham.noccb:ham.nocca],T2_bb[:,:,:s_o,s_o:])
+			       + np.einsum('bx,ijax->ijab',
+	     			 ham.F_b[ham.nocca:,ham.noccb:ham.nocca],T2_bb[:,:,s_o:,:s_o]))
+			G2_ab[:ham.noccb,:,:,s_o:] +=(-np.einsum('ix,xjab->ijab',
+          			 ham.F_a[:ham.noccb,ham.noccb:ham.nocca],T2_ab[ham.noccb:ham.nocca,:,:,s_o:])
+			       + np.einsum('bx,ijax->ijab',
+	     			 ham.F_b[ham.nocca:,ham.noccb:ham.nocca],T2_ab[:ham.noccb,:,:,:s_o]))
+			#Symmetrize oo-vv block again
+			G2_aa[:ham.noccb,:ham.noccb,:,:] = 0.50e0*(G2_aa[:ham.noccb,:ham.noccb,:,:]+ np.swapaxes(G2_aa[:ham.noccb,:ham.noccb,:,:],2,3))
+			G2_ab[:ham.noccb,:,:,s_o:] = 0.50e0*(G2_ab[:ham.noccb,:,:,s_o:]+ np.swapaxes(G2_ab[:ham.noccb,:,:,s_o:],2,3))
+			G2_bb[:ham.noccb,:ham.noccb,s_o:,s_o:] = 0.50e0*(G2_bb[:,:,s_o:,s_o:]+ np.swapaxes(G2_bb[:,:,s_o:,s_o:],2,3))
+		
+   	#solve HT = G, damping amplitudes to improve convergence
+		T1_a = solveccs(ham.F_a,G1_a,T1_a,ham.nocca,ham.nvirta,x=damping)
+		T1_b = solveccs(ham.F_b,G1_b,T1_b,ham.noccb,ham.nvirtb,x=damping)
+		T2_aa =   CCDutils.solveccd(ham.F_a,G2_aa,T2_aa,ham.nocca,ham.nvirta,x=damping)
+		T2_ab = UCCSDutils.solveccd(ham.F_a,ham.F_b,G2_ab,T2_ab,ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb,x=damping)
+		T2_bb =   CCDutils.solveccd(ham.F_b,G2_bb,T2_bb,ham.noccb,ham.nvirtb,x=damping)
+
+		if (variant == 'rccsd0'):
+			T2_aa = 0.50e0*(T2_aa + np.swapaxes(T2_aa,2,3))
+			T2_ab = 0.50e0*(T2_ab + np.swapaxes(T2_ab,2,3))
+			T2_bb = 0.50e0*(T2_bb + np.swapaxes(T2_bb,2,3))
+
+		elif (variant == 'roccsd0'):
+			#Symmetrize oo-vv block
+			T2_aa[:ham.noccb,:ham.noccb,:,:] = 0.50e0*(T2_aa[:ham.noccb,:ham.noccb,:,:]+ np.swapaxes(T2_aa[:ham.noccb,:ham.noccb,:,:],2,3))
+			T2_ab[:ham.noccb,:,:,s_o:] = 0.50e0*(T2_ab[:ham.noccb,:,:,s_o:]+ np.swapaxes(T2_ab[:ham.noccb,:,:,s_o:],2,3))
+			T2_bb[:ham.noccb,:ham.noccb,s_o:,s_o:] = 0.50e0*(T2_bb[:,:,s_o:,s_o:]+ np.swapaxes(T2_bb[:,:,s_o:,s_o:],2,3))
+
+
 	#Get error vecs (residuals HT-G)
 		T2aaerror, T2aaErr_vec = CCDutils.get_Err(ham.F_a,G2_aa,T2_aa,ham.nocca,ham.nvirta)
 		T2aberror, T2abErr_vec = UCCSDutils.get_Err(ham.F_a,ham.F_b,G2_ab,T2_ab,ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb)
@@ -116,14 +169,6 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 		T1aerror, T1aErr_vec = get_singles_Err(ham.F_a,G1_a,T1_a,ham.nocca,ham.nvirta)
 		T1berror, T1bErr_vec = get_singles_Err(ham.F_b,G1_b,T1_b,ham.noccb,ham.nvirtb)
 #		error = max(T2error,T1error)
-
-
-   	#solve HT = G, damping amplitudes to improve convergence
-		T1_a = solveccs(ham.F_a,G1_a,T1_a,ham.nocca,ham.nvirta,x=damping)
-		T1_b = solveccs(ham.F_b,G1_b,T1_b,ham.noccb,ham.nvirtb,x=damping)
-		T2_aa = CCDutils.solveccd(ham.F_a,G2_aa,T2_aa,ham.nocca,ham.nvirta,x=damping)
-		T2_ab = UCCSDutils.solveccd(ham.F_a,ham.F_b,G2_ab,T2_ab,ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb,x=damping)
-		T2_bb = CCDutils.solveccd(ham.F_b,G2_bb,T2_bb,ham.noccb,ham.nvirtb,x=damping)
 
 
 	#Get convergence error

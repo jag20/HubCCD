@@ -264,6 +264,13 @@ def ROHF(ham,denfile="none"):
   F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
   ham.escf = escf + ham.nrep
 
+  #Build final charge density matrix and get transformation to NO basis
+  P = 0.5e0*(P_a+P_b)
+  occ_nums, AO_to_NO = np.linalg.eigh(P)
+  idx = (-occ_nums).argsort()
+  occ_nums = occ_nums[idx]
+  AO_to_NO = AO_to_NO[:,idx]
+
   if (denfile.lower() != "none"):
       with open(denfile, "wb") as f:
         pickle.dump(P_a, f)
@@ -271,7 +278,7 @@ def ROHF(ham,denfile="none"):
 
   ham.Pa = np.copy(P_a)
   ham.Pb = np.copy(P_b)
-  return F_a, F_b, C_a, C_b
+  return F_a, F_b, C_a, C_b, AO_to_NO
 
 
 
