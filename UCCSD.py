@@ -74,20 +74,29 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	T1bErrors, T1bs, T1bErr_vec = diis_singles_setup(ham.noccb,ham.nvirtb,diis_start,diis_dim)
 
 	niter = 1
-	tol = 1.0e-10
+	tol = 1.0e-12
 	error = tol*50
 	damping= 2
 	eold  = 0.0e0
-
-	#For offdiagonal terms in non-canonical basis
+#
+#	#Check offdiagonal terms to see if we're in a non-canonical basis
 	F_a_offdiag = np.copy(ham.F_a)
 	F_b_offdiag = np.copy(ham.F_b)
 	np.fill_diagonal(F_a_offdiag,0.0)
 	np.fill_diagonal(F_b_offdiag,0.0)
+	print(F_b_offdiag)
+	if (np.amax(F_a_offdiag > tol) or np.amax(F_b_offdiag) > tol) :
+		print("Using noncanonical basis")
+		NObas = True
+	else:
+		NObas = False 
+
 
 	#Need this for fortran routines
 	va  = ham.nocca + 1
 	vb  = ham.noccb + 1
+
+
 
 	print("Beginning UCCSD iteration")
 	while (error > tol):
@@ -107,12 +116,13 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 		G2_aa, G2_ab, G2_bb = getccsdg2(T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca,ham.noccb,ham.nbas)
 
 		#Get off-diagonal terms 
-		offs = UCCSDutils.get_non_canon(F_a_offdiag,F_b_offdiag,T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.nocca,ham.noccb)
-		G1_a  += offs[0]
-		G1_b  += offs[1]
-		G2_aa += offs[2]
-		G2_ab += offs[3]
-		G2_bb += offs[4]
+		if (NObas):
+			offs = UCCSDutils.get_non_canon(F_a_offdiag,F_b_offdiag,T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.nocca,ham.noccb)
+			G1_a  += offs[0]
+			G1_b  += offs[1]
+			G2_aa += offs[2]
+			G2_ab += offs[3]
+			G2_bb += offs[4]
 
 		#Symmetrize G for CCSD0
 		if (variant == 'rccsd0'):
@@ -143,12 +153,14 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 			G2_ab[:ham.noccb,:,:,s_o:] = 0.50e0*(G2_ab[:ham.noccb,:,:,s_o:]+ np.swapaxes(G2_ab[:ham.noccb,:,:,s_o:],2,3))
 			G2_bb[:ham.noccb,:ham.noccb,s_o:,s_o:] = 0.50e0*(G2_bb[:,:,s_o:,s_o:]+ np.swapaxes(G2_bb[:,:,s_o:,s_o:],2,3))
 		
-   	#solve HT = G, damping amplitudes to improve convergence
+   	#solve HT = G, damping amplitudes to improve convergence.
+		
 		T1_a = solveccs(ham.F_a,G1_a,T1_a,ham.nocca,ham.nvirta,x=damping)
 		T1_b = solveccs(ham.F_b,G1_b,T1_b,ham.noccb,ham.nvirtb,x=damping)
 		T2_aa =   CCDutils.solveccd(ham.F_a,G2_aa,T2_aa,ham.nocca,ham.nvirta,x=damping)
 		T2_ab = UCCSDutils.solveccd(ham.F_a,ham.F_b,G2_ab,T2_ab,ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb,x=damping)
 		T2_bb =   CCDutils.solveccd(ham.F_b,G2_bb,T2_bb,ham.noccb,ham.nvirtb,x=damping)
+
 
 		if (variant == 'rccsd0'):
 			T2_aa = 0.50e0*(T2_aa + np.swapaxes(T2_aa,2,3))
@@ -168,7 +180,7 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 		T2bberror, T2bbErr_vec = CCDutils.get_Err(ham.F_b,G2_bb,T2_bb,ham.noccb,ham.nvirtb)
 		T1aerror, T1aErr_vec = get_singles_Err(ham.F_a,G1_a,T1_a,ham.nocca,ham.nvirta)
 		T1berror, T1bErr_vec = get_singles_Err(ham.F_b,G1_b,T1_b,ham.noccb,ham.nvirtb)
-#		error = max(T2error,T1error)
+#		error = max(T2aaerror,T2aberror,T2bberror,T1aerror,T1berror)
 
 
 	#Get convergence error

@@ -83,3 +83,33 @@ def get_non_canon(F_a_offdiag,F_b_offdiag,T2_aa,T2_ab,T2_bb,T1_a,T1_b,nocca,nocc
 	G1_b -= np.einsum('ik,ka->ia',F_b_offdiag[:noccb,:noccb],T1_b)
 	
 	return [G1_a, G1_b, G2_aa, G2_ab, G2_bb]
+
+
+def get_res2(T,F_a,F_b,G,nocca,noccb,nvirta,nvirtb):
+  #Calculate the residual for the CC equations at a given value of T amplitudes
+  T = np.reshape(T,(nocca,noccb,nvirta,nvirtb))
+  G = np.reshape(G,(nocca,noccb,nvirta,nvirtb))
+  F_a = np.reshape(F_a,(nocca+nvirta,nocca+nvirta))
+  F_b = np.reshape(F_b,(noccb+nvirtb,noccb+nvirtb))
+  Err_vec = np.zeros((nocca,noccb,nvirta,nvirtb))
+  for i in range(nocca):
+    for j in range(noccb):
+      for a in range(nvirta):
+        aa = a + nocca
+        for b in range(nvirtb):
+          bb = b + noccb
+          Err_vec[i,j,a,b] = G[i,j,a,b]-(F_a[i,i] + F_b[j,j] - F_a[aa,aa] - F_b[bb,bb])*T[i,j,a,b]
+  return np.einsum('ijab,ijab',Err_vec,Err_vec)
+
+def get_res1(T,F,G,nocc,nvirt):
+  #Calculate the residual for the CC equations at a given value of T amplitudes
+  T = np.reshape(T,(nocc,nvirt))
+  G = np.reshape(G,(nocc,nvirt))
+  F = np.reshape(F,(nocc+nvirt,nocc+nvirt))
+  Err_vec = np.zeros((nocc,nvirt))
+  for i in range(nocc):
+      for a in range(nvirt):
+        aa = a + nocc
+        Err_vec[i,a] = G[i,a]-(F[i,i] - F[aa,aa])*T[i,a]
+  return np.einsum('ia,ia',Err_vec,Err_vec)
+

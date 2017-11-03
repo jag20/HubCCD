@@ -280,9 +280,7 @@
 
 
 !==============================================================!
-!  Now the ring terms.  These are a little funny.              !
-!  They involve 6 intermediates.  I don't want to store them,  !
-!  so I will use them and compute them on the fly.             !
+!  Now the ring terms.                                         !
 !==============================================================!
 
 ! Terms which use Jaaaa and aaJaaaa - I'll calculate Jaaaa(ICAK)
