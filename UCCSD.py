@@ -200,7 +200,6 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 #		T2error = np.amax(T2-T2s[-1,:,:,:,:])
 #		T1error = np.amax(T1-T1s[-1,:,:])
 #		error = max(T2error,T1error)
-
    	#get energies
 		ecorr = UCCSDutils.Ecorr(ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.nocca,ham.noccb) 
 		error = abs(ecorr-eold)
