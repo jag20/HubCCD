@@ -160,6 +160,7 @@ class mol(ham):
        self.Eri_aa = twoe_MO_tran(self.Eri,AO_to_NO,AO_to_NO) 
        self.Eri_ab = np.copy(self.Eri_aa)
        self.Eri_bb = np.copy(self.Eri_aa)
+
        self.wfn_type = 'uhf' #post-HF routines don't care about S^2 constraints on MOs
 
 #    elif (self.wfn_type == 'ghf'):
