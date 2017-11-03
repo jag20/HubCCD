@@ -113,3 +113,59 @@ def get_res1(T,F,G,nocc,nvirt):
         Err_vec[i,a] = G[i,a]-(F[i,i] - F[aa,aa])*T[i,a]
   return np.einsum('ia,ia',Err_vec,Err_vec)
 
+
+def SolveT1_CG(F,T,G,nocc,nvirt):
+ 	#I'm having trouble gettin Python's Conjugate gradient routines to work with solving HT=G, since I
+    #Don't want to actually build the full H, so I'll code up a simple version here,
+	#almost verbatim from Trefethen and Bau, p. 294.
+
+	#return if we have zero solution
+	checktol=1.0e-10
+	if np.einsum('ia,ia',G,G) < checktol:
+		return np.zeros(T.shape)
+	#initialize vectors
+	x = np.copy(T)
+	r0 = np.copy(G)
+	p = np.copy(r0)
+
+	niter = 0
+	tol = 1.0e-12
+	error = tol*50
+	while (error > tol):
+		niter += 1
+		#Get A*x
+		Ax = -np.einsum('ca,ic->ia',F[nocc:,nocc:],p)
+		Ax += np.einsum('ki,ka->ia',F[:nocc,:nocc],p)
+		#step length
+		alpha =  np.einsum('ij,ij',r0,r0)/np.einsum('ij,ij',p,Ax)
+		#New solution
+		x += alpha*p
+		#residual
+		r1 = r0 - alpha*Ax
+		#Improvement factor beta
+		beta = np.einsum('ij,ij',r1,r1)/(np.einsum('ij,ij',r0,r0))
+		#new search direction
+		p = r1 + beta*p
+		#reset some values
+		r0 = np.copy(r1)
+		error = np.einsum('ia,ia',r0,r0)
+		print("niter = ", niter, "error = ", error)
+	return x
+
+		
+		
+def T1LHS(F,T,nocc,nvirt):
+	#contract T1 with Fock
+	LHS = np.zeros(np.shape(T1),dtype=T1.dtype)
+	for i in range(nocc):
+		for a in range(nvirt):
+			aa = a + nocc
+			d = (F[i,i] - F[aa,aa])
+			LHS[i,a] = T1[i,a]*d
+		
+
+
+
+
+
+

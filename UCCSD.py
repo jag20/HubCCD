@@ -76,7 +76,7 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	niter = 1
 	tol = 1.0e-12
 	error = tol*50
-	damping= 2
+	damping= 1
 	eold  = 0.0e0
 #
 #	#Check offdiagonal terms to see if we're in a non-canonical basis
@@ -155,7 +155,12 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 		
    	#solve HT = G, damping amplitudes to improve convergence.
 		
+
 		T1_a = solveccs(ham.F_a,G1_a,T1_a,ham.nocca,ham.nvirta,x=damping)
+		T1_anew = UCCSDutils.SolveT1_CG(ham.F_a,T1_a,G1_a,ham.nocca,ham.nvirta)
+		T1_atest = (T1_anew/damping + T1_a*(damping-1.0)/damping)
+		print(T1_a-T1_atest)
+		stop
 		T1_b = solveccs(ham.F_b,G1_b,T1_b,ham.noccb,ham.nvirtb,x=damping)
 		T2_aa =   CCDutils.solveccd(ham.F_a,G2_aa,T2_aa,ham.nocca,ham.nvirta,x=damping)
 		T2_ab = UCCSDutils.solveccd(ham.F_a,ham.F_b,G2_ab,T2_ab,ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb,x=damping)
