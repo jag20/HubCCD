@@ -45,13 +45,25 @@ def diis_setup(diis_start,diis_dim,nocca,noccb,nvirta,nvirtb):
 	Err_vec = np.zeros([nocca,noccb,nvirta,nvirtb])
 	return Errors, Ts, Err_vec
 
-def get_Err(F_a,F_b,G,T,nocca,noccb,nvirta,nvirtb):
+def get_Err(F_a,F_b,G,T,nocca,noccb,noccl,noccu,variant):
   #Calculate the residual for the CC equations at a given value of T2 amplitudes. Just use full contractions, in case we're
   # doing non canonical CC
+
+  if (variant == 'roccsd0'):
+    F_c = 0.5e0*(F_a+F_b)
+    soa = noccu-nocca
+    sob = noccu-noccb
   Ax  = -np.einsum('ca,ijcb->ijab',F_a[nocca:,nocca:],T)
   Ax -= np.einsum('cb,ijac->ijab', F_b[noccb:,noccb:],T)
   Ax += np.einsum('ki,kjab->ijab', F_a[:nocca,:nocca],T)
   Ax += np.einsum('kj,ikab->ijab', F_b[:noccb,:noccb],T)
+
+  #Symmetrize if doing singlet-paired CC
+  if (variant == 'roccsd0'):
+    Ax[:noccl,:noccl,soa:,sob:] = -np.einsum('ca,ijcb->ijab', F_c[noccu:,noccu:],T[:noccl,:noccl,soa:,sob:])
+    Ax[:noccl,:noccl,soa:,sob:] -= np.einsum('cb,ijac->ijab', F_c[noccu:,noccu:],T[:noccl,:noccl,soa:,sob:])
+    Ax[:noccl,:noccl,soa:,sob:] += np.einsum('ki,kjab->ijab', F_c[:noccl,:noccl],T[:noccl,:noccl,soa:,sob:])
+    Ax[:noccl,:noccl,soa:,sob:] += np.einsum('kj,ikab->ijab', F_c[:noccl,:noccl],T[:noccl,:noccl,soa:,sob:])
   Err_vec = G - Ax
   error = np.amax(np.absolute(Err_vec))
   return error, Err_vec
@@ -82,7 +94,7 @@ def SolveT1_CG(F,T,G,nocc,nvirt):
 	p = np.copy(r0)
 
 	niter = 0
-	tol = 1.0e-18
+	tol = 1.0e-12
 	error = tol*50
 	while (error > tol):
 		niter += 1
@@ -108,10 +120,10 @@ def SolveT1_CG(F,T,G,nocc,nvirt):
 		
 
 
-def SolveT2_CG(F_a,F_b,T,G,nocca,noccb,nvirta,nvirtb):
+def SolveT2_CG(F_a,F_b,T,G,nocca,noccb,noccl,noccu,variant):
  	#I'm having trouble gettin Python's Conjugate gradient routines to work with solving HT=G, since I
     #Don't want to actually build the full H, so I'll code up a simple version here,
-	#almost verbatim from Trefethen and Bau, p. 294.
+	#almost verbatim from Trefethen and Bau, p. 294. For Doubles
 
 	#return if we have zero solution
 	checktol=1.0e-10
@@ -121,9 +133,14 @@ def SolveT2_CG(F_a,F_b,T,G,nocca,noccb,nvirta,nvirtb):
 	x = np.zeros(T.shape)
 	r0 = np.copy(G)
 	p = np.copy(r0)
+	#stuff for singlet-paired CC
+	if (variant == 'roccsd0'):
+		F_c = 0.5e0*(F_a+F_b)
+		soa = noccu-nocca
+		sob = noccu-noccb
 
 	niter = 0
-	tol = 1.0e-18
+	tol = 1.0e-12
 	error = tol*50
 	while (error > tol):
 		niter += 1
@@ -132,6 +149,15 @@ def SolveT2_CG(F_a,F_b,T,G,nocca,noccb,nvirta,nvirtb):
 		Ax -= np.einsum('cb,ijac->ijab', F_b[noccb:,noccb:],p)
 		Ax += np.einsum('ki,kjab->ijab', F_a[:nocca,:nocca],p)
 		Ax += np.einsum('kj,ikab->ijab', F_b[:noccb,:noccb],p)
+
+		#Symmetrize if doing singlet-paired CC
+		if (variant == 'roccsd0'):
+			Ax[:noccl,:noccl,soa:,sob:] = -np.einsum('ca,ijcb->ijab', F_c[noccu:,noccu:],p[:noccl,:noccl,soa:,sob:])
+			Ax[:noccl,:noccl,soa:,sob:] -= np.einsum('cb,ijac->ijab', F_c[noccu:,noccu:],p[:noccl,:noccl,soa:,sob:])
+			Ax[:noccl,:noccl,soa:,sob:] += np.einsum('ki,kjab->ijab', F_c[:noccl,:noccl],p[:noccl,:noccl,soa:,sob:])
+			Ax[:noccl,:noccl,soa:,sob:] += np.einsum('kj,ikab->ijab', F_c[:noccl,:noccl],p[:noccl,:noccl,soa:,sob:])
+
+
 		#step length
 		alpha =  np.einsum('ijab,ijab',r0,r0)/np.einsum('ijab,ijab',p,Ax)
 		#New solution
