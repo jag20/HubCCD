@@ -30,7 +30,7 @@ def ccd(ham,ampfile="none",variant="ccd"):
   tol = 1.0e-09
 
   #Set up for CCD iteration and DIIS
-  diis_start, diis_dim, Errors, Ts, Err_vec = diis_setup(ham.nocc,ham.nvirt)
+  diis_start, diis_dim, Errors, Ts, Err_vec = diis_setup(ham.nocc,ham.nvirt,np.real)
   niter = 1
   error = tol*50
 

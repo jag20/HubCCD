@@ -33,13 +33,13 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 		ecorr = E1 + E2
 		eold = ecorr
 	else:
-		T2 = np.zeros([ham.nocc,ham.nocc,ham.nvirt,ham.nvirt])
-		T1 = np.zeros([ham.nocc,ham.nvirt])
+		T2 = np.zeros([ham.nocc,ham.nocc,ham.nvirt,ham.nvirt],dtype=ham.C.dtype)
+		T1 = np.zeros([ham.nocc,ham.nvirt],dtype=ham.C.dtype)
 		eold = 0.0e0
 
 	#Set up for CCSD iteration and DIIS. 
-	diis_start, diis_dim, Errors, T2s, Err_vec = CCDutils.diis_setup(ham.nocc,ham.nvirt)
-	T1Errors, T1s, T1Err_vec = diis_singles_setup(ham.nocc,ham.nvirt,diis_start,diis_dim)
+	diis_start, diis_dim, Errors, T2s, Err_vec = CCDutils.diis_setup(ham.nocc,ham.nvirt,ham.F.dtype)
+	T1Errors, T1s, T1Err_vec = diis_singles_setup(ham.nocc,ham.nvirt,diis_start,diis_dim,ham.F.dtype)
 	G1 = CCSDsingles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
 	G2 = CCSDdoubles_fact(ham.F,ham.Eri,T2,T1,ham.nocc,ham.nbas)
 	niter = 1

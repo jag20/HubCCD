@@ -30,7 +30,7 @@ class hub(ham):
     self.PeriodicY = PeriodicY
 
 
-  def get_ints(self,wfn_type="rhf",denfile="none",guess="af"):
+  def get_ints(self,wfn_type="none",denfile="none",guess="af"):
    #Do AO integrals and RHF by default
    self.wfn_type = wfn_type.lower()
 #   print(self.wfn_type)

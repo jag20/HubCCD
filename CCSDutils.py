@@ -190,12 +190,12 @@ def GCCSEn(F,Eri,T1,nocc):
 	return eccs
 
 #DIIS for singles
-def diis_singles_setup(nocc,nvirt,diis_start,diis_dim):
+def diis_singles_setup(nocc,nvirt,diis_start,diis_dim,typ):
   #use direct inversion of the iterative subspace (Pulay Chem Phys Lett 73(390), 1980) to extrapolate CC amplitudes.
   #This function sets up the various arrays we need for the extrapolation.
-  Errors  = np.zeros([diis_dim,nocc,nvirt])
-  Ts      = np.zeros([diis_dim,nocc,nvirt])
-  Err_vec = np.zeros([nocc,nvirt])
+  Errors  = np.zeros([diis_dim,nocc,nvirt],dtype=typ)
+  Ts      = np.zeros([diis_dim,nocc,nvirt],dtype=typ)
+  Err_vec = np.zeros([nocc,nvirt],dtype=typ)
   return Errors, Ts, Err_vec
 
 def get_singles_Err(F,G,T,nocc,nvirt):

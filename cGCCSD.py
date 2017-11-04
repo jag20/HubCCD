@@ -52,11 +52,11 @@ def ccsd(ham,ampfile="none"):
 
 
 	#set up for DIIS
-	diis_start, diis_dim, Errors, T2s, Err_vec = CCDutils.diis_setup(ham.nocc,ham.nvirt)
-	T1Errors, T1s, T1Err_vec = CCSDutils.diis_singles_setup(ham.nocc,ham.nvirt,diis_start,diis_dim)
+	diis_start, diis_dim, Errors, T2s, Err_vec = CCDutils.diis_setup(ham.nocc,ham.nvirt,ham.F.dtype)
+	T1Errors, T1s, T1Err_vec = CCSDutils.diis_singles_setup(ham.nocc,ham.nvirt,diis_start,diis_dim,ham.F.dtype)
 	#Convert arrays to complex as necessary
-	Errors, T2s, Err_vec = Errors.astype(np.complex), T2s.astype(np.complex), Err_vec.astype(np.complex)
-	T1Errors, T1s, T1Err_vec = T1Errors.astype(np.complex), T1s.astype(np.complex), T1Err_vec.astype(np.complex)
+#	Errors, T2s, Err_vec = Errors.astype(np.complex), T2s.astype(np.complex), Err_vec.astype(np.complex)
+#	T1Errors, T1s, T1Err_vec = T1Errors.astype(np.complex), T1s.astype(np.complex), T1Err_vec.astype(np.complex)
 
 	#Build some initial intermediates. ham.C is AOxMO, with alpha in the first nbas/2 rows, followed by beta.
 	C_up   =  ham.C[:ham.nbas,:]
