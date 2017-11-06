@@ -65,11 +65,11 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	G1_b  = np.zeros([ham.noccb,ham.nvirtb],order='F')
 
 	#Set up for CCSD iteration and DIIS. 
-	diis_start, diis_dim, T2aaErrors, T2aas, T2aaErr_vec = CCDutils.diis_setup(ham.nocca,ham.nvirta)
+	diis_start, diis_dim, T2aaErrors, T2aas, T2aaErr_vec = CCDutils.diis_setup(ham.nocca,ham.nvirta,T2_aa.dtype)
 	T2abErrors, T2abs, T2abErr_vec = UCCSDutils.diis_setup(diis_start,diis_dim,ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb)
 	T2bbErrors, T2bbs, T2bbErr_vec = UCCSDutils.diis_setup(diis_start,diis_dim,ham.noccb,ham.noccb,ham.nvirtb,ham.nvirtb)
-	T1aErrors, T1as, T1aErr_vec = diis_singles_setup(ham.nocca,ham.nvirta,diis_start,diis_dim)
-	T1bErrors, T1bs, T1bErr_vec = diis_singles_setup(ham.noccb,ham.nvirtb,diis_start,diis_dim)
+	T1aErrors, T1as, T1aErr_vec = diis_singles_setup(ham.nocca,ham.nvirta,diis_start,diis_dim,T1_a.dtype)
+	T1bErrors, T1bs, T1bErr_vec = diis_singles_setup(ham.noccb,ham.nvirtb,diis_start,diis_dim,T1_b.dtype)
 
 	niter = 1
 	tol = 1.0e-8

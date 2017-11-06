@@ -262,7 +262,7 @@ def ROHF(ham,denfile="none"):
 
   #Build final fock matrices
   F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
-  ham.escf = escf + ham.nrep
+  ham.escf = escf 
 
   #Build final charge density matrix and get transformation to NO basis
   P = 0.5e0*(P_a+P_b)
