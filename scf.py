@@ -198,6 +198,16 @@ def ROHF(ham,denfile="none"):
 
   P_a = np.copy(ham.P_a)
   P_b = np.copy(ham.P_b)
+#  P_a = np.zeros(ham.P_a.shape)
+#  P_b = np.zeros(ham.P_b.shape)
+
+
+  #Read density matrix from file if we have it
+  if ((denfile.lower() != "none") and os.path.isfile(denfile)):
+    print("Reading previous density matrix")
+    with open(denfile, 'rb') as f:
+      P_a = pickle.load(f)
+      P_b = pickle.load(f)
 
 #  F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
   #Set some values and do the UHF iteration

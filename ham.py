@@ -124,7 +124,7 @@ class hub(ham):
 
 class mol(ham):
 
-  def __init__(self,wfn_type,fname):
+  def __init__(self,wfn_type,fname,denfile="none"):
     from readints import read_ints 
     hub.__init__(self)
     self.hamtype = "Molecule"
@@ -146,7 +146,7 @@ class mol(ham):
        self.Eri = np.swapaxes(self.Eri_aa,1,2)
        self.Eri = np.swapaxes(twoe_MO_tran(self.Eri,MOa_to_Orth,MOa_to_Orth),1,2)
        #Do ROHF
-       self.F_a, self.F_b, self.C_a, self.C_b, AO_to_NO = ROHF(self)
+       self.F_a, self.F_b, self.C_a, self.C_b, AO_to_NO = ROHF(self,denfile)
 
        #Now return MO-basis integrals. No reason not to do NO basis, since we typically 
 	   #use ROHF orbitals for ROCCSD0.	

@@ -74,7 +74,7 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	niter = 1
 	tol = 1.0e-8
 	error = tol*50
-	damping= 2
+	damping= 3
 	eold  = 0.0e0
 #
 #	#Check offdiagonal terms to see if we're in a non-canonical basis
@@ -82,11 +82,12 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	F_b_offdiag = np.copy(ham.F_b)
 	np.fill_diagonal(F_a_offdiag,0.0)
 	np.fill_diagonal(F_b_offdiag,0.0)
-	if (np.amax(F_a_offdiag[:ham.nocca,:ham.nocca] > tol) or np.amax(F_b_offdiag[:ham.noccb,:ham.noccb]) > tol) :
-		print("Using noncanonical basis")
-		NObas = True
-	else:
-		NObas = False 
+#	print(F_a_offdiag)
+#	if (np.amax(F_a_offdiag[:ham.nocca,:ham.nocca] > tol) or np.amax(F_b_offdiag[:ham.noccb,:ham.noccb]) > tol) :
+	print("Using noncanonical basis")
+	NObas = True
+#	else:
+#		NObas = False 
 
 
 	#Need this for fortran routines
