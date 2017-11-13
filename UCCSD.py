@@ -74,7 +74,7 @@ def ccsd(ham,ampfile="none",variant="ccd"):
 	niter = 1
 	tol = 1.0e-8
 	error = tol*50
-	damping= 3
+	damping= 4
 	eold  = 0.0e0
 #
 #	#Check offdiagonal terms to see if we're in a non-canonical basis

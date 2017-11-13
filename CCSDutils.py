@@ -238,7 +238,7 @@ def diis_singles(diis_start,diis_dim,iteration,Errors,Ts,Told,Err_vec):
     #Fill the diis arrays until we have gone enough cycles to extrapolate
     count = iteration - diis_start - 1
     Errors[count,:,:] = Err_vec
-    Ts[count:,:] = Told
+    Ts[count,:,:] = Told
     T = np.copy(Told)
 
   else:

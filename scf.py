@@ -196,6 +196,10 @@ def ROHF(ham,denfile="none"):
 
   print("Doing ROHF")
 
+  #Setup DIIS
+
+  diis_start, diis_dim, Errors, F_as, F_bs, Err_vec = diis_setup(ham.nbas)
+
   P_a = np.copy(ham.P_a)
   P_b = np.copy(ham.P_b)
 #  P_a = np.zeros(ham.P_a.shape)
@@ -212,10 +216,11 @@ def ROHF(ham,denfile="none"):
 #  F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
   #Set some values and do the UHF iteration
   error = 1.0
-  tol = 1.0e-10
+  tol = 1.0e-8
   eold = 1.0
   niter = 1
   x = 4.0
+
   while (error  > tol):
 
     F_a, F_b = buildFs_uhf(P_a,P_b,ham.OneH,ham.Eri)
@@ -245,6 +250,12 @@ def ROHF(ham,denfile="none"):
     F_a = onee_MO_tran(F_a,AO_to_NO.T)
     F_b = onee_MO_tran(F_b,AO_to_NO.T)
     #-----CUHF modification
+
+	#DIIS
+    normerr, Err_vec = get_Err(Err_vec,F_a,F_b,P_a,P_b,ham.nbas)
+    print("err = ", normerr)
+    F_a, F_b, Errors, F_as, F_bs =  diis(diis_start,diis_dim,niter,Errors,F_as,F_bs,F_a,F_b,Err_vec)
+
 
 #    #Get MO Coefficients
     e, C_a = np.linalg.eigh(F_a)
@@ -435,3 +446,71 @@ def twoe_MO_tran_UHF_to_GHF(Eri,C_1,C_2,nocca,noccb,nbas):
 
   Eri = np.swapaxes(Eri,1,2) #Convert to Dirac ordering 
   return Eri
+
+def diis_setup(nbas):
+  #use direct inversion of the iterative subspace (Pulay Chem Phys Lett 73(390), 1980) to extrapolate Fock matrix for SCF.
+  #This function sets up the various arrays we need for the extrapolation.
+  diis_start = 10
+  diis_dim = 4
+  Errors  = np.zeros([diis_dim,2*nbas*nbas])
+  F_as    = np.zeros([diis_dim,nbas,nbas])
+  F_bs    = np.zeros([diis_dim,nbas,nbas])
+  Err_vec = np.zeros(2*nbas*nbas)
+  return diis_start, diis_dim, Errors, F_as, F_bs,Err_vec
+
+
+
+def diis(diis_start,diis_dim,iteration,Errors,F_as,F_bs,F_aold,F_bold,Err_vec):
+  #use direct inversion of the iterative subspace (Pulay Chem Phys Lett 73(390), 1980) to accelerate convergence.
+  #This function performs the actual extrapolation. Same structure as the version for the T-amplitudes (ccdutils), but for SCF.
+
+  if (iteration > (diis_start + diis_dim)):
+    #extrapolate the amplitudes if we're sufficiently far into the SCF iterations
+
+    #update error and amplitudes for next DIIS cycle. 
+    Errors = np.roll(Errors,-1,axis=0)
+    Errors[-1,:] = Err_vec
+    F_as = np.roll(F_as,-1,axis=0)
+    F_bs = np.roll(F_bs,-1,axis=0)
+    F_as [-1,:,:] = F_aold
+    F_bs [-1,:,:] = F_bold
+
+    #solve the DIIS  Bc = l linear equation
+    B = np.zeros((diis_dim+1,diis_dim+1))
+    B[:,-1] = -1
+    B[-1,:] = -1
+    B[-1,-1] = 0
+    B[:-1,:-1] = np.einsum('ik,jk->ij',Errors,Errors)
+    l =  np.zeros(diis_dim+1)
+    l[-1] = -1
+    c = np.linalg.solve(B,l)
+
+    F_a = np.einsum('q,qij->ij',c[:-1], F_as)
+    F_b = np.einsum('q,qij->ij',c[:-1], F_bs)
+    
+
+  elif (iteration > (diis_start)):
+    #Fill the diis arrays until we have gone enough cycles to extrapolate
+    count = iteration - diis_start - 1
+    Errors[count,:] = Err_vec
+    F_as[count,:,:] = F_aold
+    F_bs[count,:,:] = F_bold
+    F_a = np.copy(F_aold)
+    F_b = np.copy(F_bold)
+
+  else:
+    F_a = np.copy(F_aold)
+    F_b = np.copy(F_bold)
+
+  return F_a, F_b, Errors, F_as, F_bs 
+
+def get_Err(Err_vec,F_A,F_B,P_A,P_B,nbas):
+  #At convergence, [F,P] = 0, so our error vector will be this
+  #commutator.
+  Err_vec = np.zeros((2*nbas*nbas))
+  Err_vec[:nbas*nbas] = np.reshape(np.dot(F_A,P_A) - np.dot(P_A,F_A),nbas*nbas) 
+  Err_vec[nbas*nbas:] = np.reshape(np.dot(F_B,P_B) - np.dot(P_B,F_B),nbas*nbas)
+  error = np.linalg.norm((Err_vec))
+  return error, Err_vec
+
+
