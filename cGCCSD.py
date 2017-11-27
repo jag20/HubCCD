@@ -47,6 +47,12 @@ def ccsd(ham,ampfile="none"):
 
 
 	#Initialize/get amplitudes
+	if ((ampfile != 'none') and(os.path.isfile(ampfile))):
+		with open(ampfile, 'rb') as f:
+			T2 = pickle.load(f)
+			T1 = pickle.load(f)
+
+	else:
 	T2 = np.zeros([ham.nocc,ham.nocc,ham.nvirt,ham.nvirt],dtype=np.complex)
 	T1 = np.zeros([ham.nocc,ham.nvirt],dtype=np.complex)
 
@@ -281,6 +287,11 @@ def ccsd(ham,ampfile="none"):
 		eold = ecorr
 		print("Iteration ", niter, " Energy = ", ecorr, " Error = ", error)
 		niter +=1
+
+	if ((ampfile != 'none')):
+		with open(ampfile, 'wb') as f:
+			pickle.dump(T2,f)
+			pickle.dump(T1,f)
 
 	ham.ecorr = ecorr
 	 
