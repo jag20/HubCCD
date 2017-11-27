@@ -40,6 +40,9 @@ def ccsd(ham,ampfile="none",variant="ccd",singles=True):
 			variant = 'rccsd0'
 		elif (ham.wfn_type == 'uhf'):
 			variant = 'roccsd0'
+
+	if not singles:
+		print("No Singles")
    
 #read amplitudes from file if present to improve convergence
 	if ((ampfile != 'none') and(os.path.isfile(ampfile))):
@@ -51,6 +54,7 @@ def ccsd(ham,ampfile="none",variant="ccd",singles=True):
 				T1_a = pickle.load(f)
 				T1_b = pickle.load(f)
 			else:
+				print("No Singles")
 				T1_a  = np.zeros([ham.nocca,ham.nvirta],order='F')
 				T1_b  = np.zeros([ham.noccb,ham.nvirtb],order='F')
 
@@ -62,6 +66,7 @@ def ccsd(ham,ampfile="none",variant="ccd",singles=True):
 		T2_aa = np.zeros([ham.nocca,ham.nocca,ham.nvirta,ham.nvirta],order='F')
 		T2_ab = np.zeros([ham.nocca,ham.noccb,ham.nvirta,ham.nvirtb],order='F')
 		T2_bb = np.zeros([ham.noccb,ham.noccb,ham.nvirtb,ham.nvirtb],order='F')
+
 		T1_a  = np.zeros([ham.nocca,ham.nvirta],order='F')
 		T1_b  = np.zeros([ham.noccb,ham.nvirtb],order='F')
 
@@ -128,7 +133,8 @@ def ccsd(ham,ampfile="none",variant="ccd",singles=True):
 
 
 	   	#build RHS G
-		G1_a, G1_b  = getg1(T1_a,T1_b,T2_aa,T2_ab,T2_bb,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb, ham.nocca,ham.noccb,ham.nbas)
+		if singles:
+			G1_a, G1_b  = getg1(T1_a,T1_b,T2_aa,T2_ab,T2_bb,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb, ham.nocca,ham.noccb,ham.nbas)
 		G2_aa, G2_ab, G2_bb = getccsdg2(T2_aa,T2_ab,T2_bb,T1_a,T1_b,ham.F_a,ham.F_b,ham.Eri_aa,ham.Eri_ab,ham.Eri_bb,ham.nocca,ham.noccb,ham.nbas)
 
 #
@@ -203,8 +209,9 @@ def ccsd(ham,ampfile="none",variant="ccd",singles=True):
 		T2aaerror, T2aaErr_vec = UCCSDutils.get_Err(ham.F_a,ham.F_a,G2_aa,T2_aa,ham.nocca,ham.nocca,ham.noccb,ham.nocca,variant)
 		T2aberror, T2abErr_vec = UCCSDutils.get_Err(ham.F_a,ham.F_b,G2_ab,T2_ab,ham.nocca,ham.noccb,ham.noccb,ham.nocca,variant)
 		T2bberror, T2bbErr_vec = UCCSDutils.get_Err(ham.F_b,ham.F_b,G2_bb,T2_bb,ham.noccb,ham.noccb,ham.noccb,ham.nocca,variant)
-		T1aerror, T1aErr_vec   = UCCSDutils.get_singles_Err(ham.F_a,G1_a,T1_a,ham.nocca,ham.nvirta)
-		T1berror, T1bErr_vec   = UCCSDutils.get_singles_Err(ham.F_b,G1_b,T1_b,ham.noccb,ham.nvirtb)
+		if singles:
+			T1aerror, T1aErr_vec   = UCCSDutils.get_singles_Err(ham.F_a,G1_a,T1_a,ham.nocca,ham.nvirta)
+			T1berror, T1bErr_vec   = UCCSDutils.get_singles_Err(ham.F_b,G1_b,T1_b,ham.noccb,ham.nvirtb)
 		if (variant == 'roccsd0'):
 			#Symmetrize oo-vv block
 			T2aaErr_vec[:ham.noccb,:ham.noccb,:,:] = 0.50e0*(T2aaErr_vec[:ham.noccb,:ham.noccb,:,:]+ 

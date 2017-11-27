@@ -319,10 +319,12 @@ def diis(diis_start,diis_dim,iteration,Errors,Ts,Told,Err_vec):
     B[:-1,:-1] = np.einsum('iklab,jklab->ij',Errors,Errors)
     l =  np.zeros(diis_dim+1,dtype=Told.dtype)
     l[-1] = -1
-    c = np.linalg.solve(B,l)
-
-    T = np.einsum('q,qijab->ijab',c[:-1], Ts)
+    if (np.amax(B) > 1.0e-09):
+      c = np.linalg.solve(B,l)
+      T = np.einsum('q,qijab->ijab',c[:-1], Ts)
     
+    else:
+      T = np.copy(Told)
 
   elif (iteration > (diis_start)):
     #Fill the diis arrays until we have gone enough cycles to extrapolate
