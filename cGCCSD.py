@@ -6,6 +6,8 @@ import numpy as np
 #import cCCutils
 import CCDutils
 import CCSDutils
+import os
+import pickle
 from scf import onee_MO_tran
 
 def ccsd(ham,ampfile="none"):
@@ -53,8 +55,8 @@ def ccsd(ham,ampfile="none"):
 			T1 = pickle.load(f)
 
 	else:
-	T2 = np.zeros([ham.nocc,ham.nocc,ham.nvirt,ham.nvirt],dtype=np.complex)
-	T1 = np.zeros([ham.nocc,ham.nvirt],dtype=np.complex)
+		T2 = np.zeros([ham.nocc,ham.nocc,ham.nvirt,ham.nvirt],dtype=np.complex)
+		T1 = np.zeros([ham.nocc,ham.nvirt],dtype=np.complex)
 
 
 	#set up for DIIS
