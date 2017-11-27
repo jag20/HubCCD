@@ -254,7 +254,7 @@ def ROHF(ham,denfile="none"):
 	#DIIS
     normerr, Err_vec = get_Err(Err_vec,F_a,F_b,P_a,P_b,ham.nbas)
     print("err = ", normerr)
-    F_a, F_b, Errors, F_as, F_bs =  diis(diis_start,diis_dim,niter,Errors,F_as,F_bs,F_a,F_b,Err_vec)
+#    F_a, F_b, Errors, F_as, F_bs =  diis(diis_start,diis_dim,niter,Errors,F_as,F_bs,F_a,F_b,Err_vec)
 
 
 #    #Get MO Coefficients

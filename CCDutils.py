@@ -291,7 +291,7 @@ def solveccd(F,G,T,nocc,nvirt,x=4.0):
 def diis_setup(nocc,nvirt,typ):
   #use direct inversion of the iterative subspace (Pulay Chem Phys Lett 73(390), 1980) to extrapolate CC amplitudes.
   #This function sets up the various arrays we need for the extrapolation.
-  diis_start = 15
+  diis_start = 12
   diis_dim = 3
   Errors  = np.zeros([diis_dim,nocc,nocc,nvirt,nvirt],typ)
   Ts      = np.zeros([diis_dim,nocc,nocc,nvirt,nvirt],typ)

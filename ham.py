@@ -135,33 +135,56 @@ class mol(ham):
     elif (self.wfn_type == 'uhf'):
        self.nbas, self.nocca, self.noccb, self.nvirta, self.nvirtb, self.escf, self.C_a, self.C_b, self.F_a, self.F_b, self.Eri_aa, self.Eri_ab, self.Eri_bb = read_ints(self.wfn_type,fname)
     elif (self.wfn_type == 'rohf'): 
-       self.nbas, self.nocca, self.noccb, self.nvirta, self.nvirtb, self.C_a, self.Eri_aa, P_a, P_b, X, S, H, self.nrep = read_ints(self.wfn_type,fname)
+       self.nbas, self.nocca, self.noccb, self.nvirta, self.nvirtb, self.escf, self.nrep, C_a, C_b, P_a, P_b, X, S, OneH, Eri = read_ints(self.wfn_type,fname)
 	   #Take P to Orthogonal basis
-       self.P_a = np.dot(np.linalg.inv(X),np.dot(P_a,np.linalg.inv(X).T)) 
-       self.P_b = np.dot(np.linalg.inv(X),np.dot(P_b,np.linalg.inv(X).T)) 
+#       self.P_a = np.dot(np.linalg.inv(X),np.dot(P_a,np.linalg.inv(X).T)) 
+#       self.P_b = np.dot(np.linalg.inv(X),np.dot(P_b,np.linalg.inv(X).T)) 
 #       #Take integrals back to Orthogonal Basis
-       MOa_to_Orth = np.dot(np.linalg.inv(self.C_a),X)
-       self.OneH = onee_MO_tran(H,MOa_to_Orth)
-#	   #Keep Eris in Mulliken notation for scf
-       self.Eri = np.swapaxes(self.Eri_aa,1,2)
-       self.Eri = np.swapaxes(twoe_MO_tran(self.Eri,MOa_to_Orth,MOa_to_Orth),1,2)
-       #Do ROHF
-       self.F_a, self.F_b, self.C_a, self.C_b, AO_to_NO = ROHF(self,denfile)
+#       MOa_to_Orth = np.dot(np.linalg.inv(self.C_a),X)
+#       self.OneH = onee_MO_tran(H,MOa_to_Orth)
 
-       #Now return MO-basis integrals. No reason not to do NO basis, since we typically 
-	   #use ROHF orbitals for ROCCSD0.	
-#       self.F_a = onee_MO_tran(self.F_a,self.C_a)
-#       self.F_b = onee_MO_tran(self.F_b,self.C_b)
-#       self.Eri_aa = twoe_MO_tran(self.Eri,self.C_a,self.C_a)
-#       self.Eri_ab = twoe_MO_tran(self.Eri,self.C_a,self.C_b)
-#       self.Eri_bb = twoe_MO_tran(self.Eri,self.C_b,self.C_b)   
-       self.F_a = onee_MO_tran(self.F_a,AO_to_NO) 
-       self.F_b = onee_MO_tran(self.F_b,AO_to_NO)
-       self.Eri_aa = twoe_MO_tran(self.Eri,AO_to_NO,AO_to_NO) 
+#	   #Keep Eris in Mulliken notation for scf
+#       self.Eri = np.swapaxes(self.Eri_aa,1,2)
+#       self.Eri = np.swapaxes(twoe_MO_tran(self.Eri,MOa_to_Orth,MOa_to_Orth),1,2)
+#       self.Eri = np.swapaxes(twoe_MO_tran(self.Eri,self.C_a,self.C_b),1,2)
+
+## test
+#       print("TEST = ", calc_euhf(self.P_a,self.P_b,F_a,F_b,self.OneH) + self.nrep)
+       #1-es back to AO basis
+#       MOa_to_AO = np.linalg.inv(C_a)
+#       F_a = onee_MO_tran(F_a,MOa_to_AO)
+#       F_b = onee_MO_tran(F_b,MOa_to_AO)
+#       self.Eri = twoe_MO_tran(self.Eri_aa,MOa_to_AO,MOa_to_AO) 
+
+       F_a, F_b = buildFs_uhf(P_a,P_b,OneH,Eri)
+
+       etest = (calc_euhf(P_a,P_b,F_a,F_b,OneH) + self.nrep)
+       if abs(etest  - self.escf > 1.0e-7):
+         print("Error recovering integrals")
+       #take everything to AO-basis
+       P_a = np.dot(np.linalg.inv(X),np.dot(P_a,np.linalg.inv(X).T)) 
+       P_b = np.dot(np.linalg.inv(X),np.dot(P_b,np.linalg.inv(X).T)) 
+       OneH = onee_MO_tran(OneH,X)
+       F_a = onee_MO_tran(F_a,X)
+       F_b = onee_MO_tran(F_b,X)
+       Eri = np.swapaxes(twoe_MO_tran(Eri,X,X),1,2)
+
+       #Build charge density matrix and get transformation to NO basis
+       P = 0.5e0*(P_a+P_b)
+       occ_nums, AO_to_NO = np.linalg.eigh(P)
+       idx = (-occ_nums).argsort()
+       occ_nums = occ_nums[idx]
+       AO_to_NO = AO_to_NO[:,idx]
+	   #Transform integrals to NO basis
+       self.F_a = onee_MO_tran(F_a,AO_to_NO)
+       self.F_b = onee_MO_tran(F_b,AO_to_NO)
+       self.Eri_aa = twoe_MO_tran(Eri,AO_to_NO,AO_to_NO) 
        self.Eri_ab = np.copy(self.Eri_aa)
        self.Eri_bb = np.copy(self.Eri_aa)
 
        self.wfn_type = 'uhf' #post-HF routines don't care about S^2 constraints on MOs
+#       stop
+
 
 #    elif (self.wfn_type == 'ghf'):
 #       print('shape =', self.Eri.shape)
