@@ -15,7 +15,7 @@ def ccd(ham,ampfile="none",variant="ccd"):
   energy = ens[ham.wfn_type]
    
 
-  damping=1
+  damping=5
   #read amplitudes from file if present to improve convergence
   if ((ampfile != 'none') and(os.path.isfile(ampfile))):
     with open(ampfile, 'rb') as f:
@@ -27,7 +27,7 @@ def ccd(ham,ampfile="none",variant="ccd"):
     eold = 0.0e0
 
   Told = np.copy(T)
-  tol = 1.0e-09
+  tol = 1.0e-06
 
   #Set up for CCD iteration and DIIS
   diis_start, diis_dim, Errors, Ts, Err_vec = diis_setup(ham.nocc,ham.nvirt,np.float)
